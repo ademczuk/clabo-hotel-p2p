@@ -1,0 +1,13 @@
+{
+  "name": "p2p-signaling-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "y-webrtc signaling server for P2P Habbo Hotel",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
