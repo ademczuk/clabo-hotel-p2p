@@ -38,20 +38,22 @@ export default defineConfig({
 
   plugins: [
     {
-      name: "local-c-images",
+      name: "local-assets",
       configureServer(server) {
-        // Serve c_images from public/c_images/ before the CDN proxy intercepts
-        const localDir = resolve(__dirname, "public/c_images");
+        // Serve local assets before the CDN proxy intercepts.
+        // Maps /proxy-assets/<subpath> → public/<subpath> when a local file exists.
+        const publicDir = resolve(__dirname, "public");
+        const mimeTypes: Record<string, string> = {
+          ".png": "image/png", ".jpg": "image/jpeg", ".gif": "image/gif",
+          ".svg": "image/svg+xml", ".webp": "image/webp",
+          ".nitro": "application/octet-stream", ".mp3": "audio/mpeg",
+        };
         server.middlewares.use((req, res, next) => {
-          if (req.url?.startsWith("/proxy-assets/c_images/")) {
-            const relPath = req.url.replace("/proxy-assets/c_images/", "");
-            const localPath = resolve(localDir, relPath);
+          if (req.url?.startsWith("/proxy-assets/")) {
+            const relPath = req.url.replace("/proxy-assets/", "");
+            const localPath = resolve(publicDir, relPath);
             if (existsSync(localPath) && statSync(localPath).isFile()) {
               const ext = extname(localPath).toLowerCase();
-              const mimeTypes: Record<string, string> = {
-                ".png": "image/png", ".jpg": "image/jpeg", ".gif": "image/gif",
-                ".svg": "image/svg+xml", ".webp": "image/webp",
-              };
               res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
               res.setHeader("Cache-Control", "public, max-age=86400");
               createReadStream(localPath).pipe(res);

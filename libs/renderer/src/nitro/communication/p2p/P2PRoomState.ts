@@ -568,6 +568,12 @@ export class P2PRoomState {
     // onRoomModelEvent reads _latestEntryTileEvent to determine the door position.
     this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL_DOOR, model.entryX, model.entryY, model.entryDir);
 
+    // Paint — MUST come BEFORE ROOM_MODEL so values are stored in _roomDatas
+    // and read by createRoomInstance (avoids default white/purple fallback)
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "floor", "210");
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "wallpaper", "207");
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "landscape", "1.1");
+
     // FloorHeightMap (ROOM_MODEL = 1301) - the main room model
     // scale=true means parser._scale=32 which avoids restrictsScaling=true and restrictedScale=0.5
     // IMPORTANT: Strip trailing \r to prevent FloorHeightMapMessageParser from counting
@@ -585,11 +591,6 @@ export class P2PRoomState {
     // Room thickness / visualization settings (ROOM_THICKNESS = 3547)
     // hideWalls=false, thicknessWall=0, thicknessFloor=0
     this._connection.injectIncomingMessage(IncomingHeader.ROOM_THICKNESS, false, 0, 0);
-
-    // Paint
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "floor", "110");
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "wallpaper", "203");
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "landscape", "1.1");
 
     // Rights
     this._connection.injectIncomingMessage(IncomingHeader.ROOM_RIGHTS, 4);
