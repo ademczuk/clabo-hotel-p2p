@@ -139,6 +139,15 @@ export class P2PRoomState {
   private _walkTimer: any;
   private _isWalking: boolean;
   private _chatReady: boolean;
+  private _firstGuestRoomDone: boolean;
+
+  // Stored observer refs for cleanup
+  private _userPositionsObserver: ((event: Y.YMapEvent<any>) => void) | null;
+  private _chatMessagesObserver: ((event: Y.YArrayEvent<any>) => void) | null;
+
+  // Deferred signaling timers (stored for cleanup)
+  private _signalingConnectTimeout: any;
+  private _signalingCheckInterval: any;
 
   constructor(connection: P2PLoopbackConnection) {
     this._connection = connection;
@@ -170,6 +179,11 @@ export class P2PRoomState {
     this._walkTimer = null;
     this._isWalking = false;
     this._chatReady = false;
+    this._firstGuestRoomDone = false;
+    this._userPositionsObserver = null;
+    this._chatMessagesObserver = null;
+    this._signalingConnectTimeout = null;
+    this._signalingCheckInterval = null;
   }
 
   // ─── Outgoing Message Router ────────────────────────────────
@@ -373,8 +387,6 @@ export class P2PRoomState {
    * Responds with ROOM_INFO (687) containing full room data.
    * When called from TryVisitRoom, roomForward must be true to trigger CreateRoomSession.
    */
-  private _firstGuestRoomDone: boolean = false;
-
   private handleGetGuestRoom(roomId: number): void {
     const isFirstRequest = !this._firstGuestRoomDone;
     this._firstGuestRoomDone = true;
@@ -660,8 +672,8 @@ export class P2PRoomState {
     // Seeder election is handled entirely by P2PNetworkResilience (lowest peerId wins).
     // The onSeederChange callback above initializes room_meta when this peer becomes seeder.
 
-    // Listen for changes to user_positions
-    this._userPositions.observe((event: Y.YMapEvent<any>) => {
+    // Listen for changes to user_positions (store ref for cleanup)
+    this._userPositionsObserver = (event: Y.YMapEvent<any>) => {
       event.changes.keys.forEach((change, key) => {
         if (key === this._localPeerId) return;
 
@@ -673,7 +685,8 @@ export class P2PRoomState {
           this.onPeerLeft(key);
         }
       });
-    });
+    };
+    this._userPositions.observe(this._userPositionsObserver);
 
     // Listen for chat messages (with replay protection)
     // Gate on _chatReady to skip the initial Yjs sync replay of existing messages.
@@ -681,7 +694,7 @@ export class P2PRoomState {
     // This timeout is the solo-mode fallback (no provider will ever connect).
     setTimeout(() => { if (!this._chatReady) { this._chatReady = true; } }, 3000);
 
-    this._chatMessages.observe((event: Y.YArrayEvent<any>) => {
+    this._chatMessagesObserver = (event: Y.YArrayEvent<any>) => {
       if (!this._chatReady) return;
       if (event.changes.added.size > 0) {
         event.changes.added.forEach((item) => {
@@ -693,7 +706,8 @@ export class P2PRoomState {
           }
         });
       }
-    });
+    };
+    this._chatMessages.observe(this._chatMessagesObserver);
 
     // Handle existing peers already in the room
     this._userPositions.forEach((_value: any, key: string) => {
@@ -913,8 +927,8 @@ export class P2PRoomState {
         message, type, timestamp: Date.now(),
       }]);
 
-      // Evict old messages to prevent unbounded growth
-      if (this._chatMessages.length > MAX_CHAT_MESSAGES) {
+      // Evict old messages to prevent unbounded growth (seeder-only to avoid double-delete race)
+      if (this._isSeeder && this._chatMessages.length > MAX_CHAT_MESSAGES) {
         this._doc.transact(() => {
           const excess = this._chatMessages.length - MAX_CHAT_MESSAGES;
           if (excess > 0) this._chatMessages.delete(0, excess);
@@ -1055,6 +1069,8 @@ export class P2PRoomState {
   // ─── Lifecycle ──────────────────────────────────────────────
 
   public destroy(): void {
+    this._isInRoom = false;
+
     // Cancel any active walk
     if (this._walkTimer) {
       clearInterval(this._walkTimer);
@@ -1063,9 +1079,29 @@ export class P2PRoomState {
     this._isWalking = false;
     this._walkQueue = [];
 
+    // Clear deferred signaling timers
+    if (this._signalingConnectTimeout) {
+      clearTimeout(this._signalingConnectTimeout);
+      this._signalingConnectTimeout = null;
+    }
+    if (this._signalingCheckInterval) {
+      clearInterval(this._signalingCheckInterval);
+      this._signalingCheckInterval = null;
+    }
+
     // Remove page unload listener
     window.removeEventListener("beforeunload", this._handleBeforeUnload);
     window.removeEventListener("pagehide", this._handleBeforeUnload);
+
+    // Unregister Yjs observers before destroying doc
+    if (this._userPositions && this._userPositionsObserver) {
+      try { this._userPositions.unobserve(this._userPositionsObserver); } catch (e) { /* */ }
+      this._userPositionsObserver = null;
+    }
+    if (this._chatMessages && this._chatMessagesObserver) {
+      try { this._chatMessages.unobserve(this._chatMessagesObserver); } catch (e) { /* */ }
+      this._chatMessagesObserver = null;
+    }
 
     if (this._resilience) {
       this._resilience.destroy();
@@ -1086,7 +1122,12 @@ export class P2PRoomState {
       this._doc.destroy();
       this._doc = null;
     }
-    this._isInRoom = false;
+
+    // Clear debug refs to allow GC
+    if (typeof window !== 'undefined') {
+      delete (window as any).__p2pMetrics;
+      delete (window as any).__p2pState;
+    }
   }
 
   private _handleBeforeUnload = (): void => {
@@ -1127,7 +1168,7 @@ export class P2PRoomState {
       try {
         this._provider = new WebrtcProvider("p2p-nitro-" + this._roomName, this._doc, {
           signaling: [server],
-          maxConns: 20 + Math.floor(Math.random() * 15), // randomize to prevent mesh clustering
+          maxConns: 20,
           peerOpts: {
             config: {
               iceServers: [
@@ -1141,7 +1182,7 @@ export class P2PRoomState {
         });
 
         // Give the provider a few seconds to connect, then check
-        const connectTimeout = setTimeout(() => {
+        this._signalingConnectTimeout = setTimeout(() => {
           if (!connected && this._provider) {
             // Check if any signaling connection succeeded
             let anyConnected = false;
@@ -1161,14 +1202,14 @@ export class P2PRoomState {
 
         // Listen for successful connection
         if (this._provider.signalingConns) {
-          const checkConnected = setInterval(() => {
-            if (connected) { clearInterval(checkConnected); return; }
-            if (!this._provider?.signalingConns) { clearInterval(checkConnected); return; }
+          this._signalingCheckInterval = setInterval(() => {
+            if (connected) { clearInterval(this._signalingCheckInterval); this._signalingCheckInterval = null; return; }
+            if (!this._provider?.signalingConns) { clearInterval(this._signalingCheckInterval); this._signalingCheckInterval = null; return; }
             for (const conn of this._provider.signalingConns) {
               if (conn && conn.connected) {
                 connected = true;
-                clearTimeout(connectTimeout);
-                clearInterval(checkConnected);
+                clearTimeout(this._signalingConnectTimeout); this._signalingConnectTimeout = null;
+                clearInterval(this._signalingCheckInterval); this._signalingCheckInterval = null;
                 NitroLogger.log("[P2P] Signaling server connected:", server);
                 // Update resilience with the provider and start connection monitoring
                 if (this._resilience) {

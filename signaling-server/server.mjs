@@ -59,9 +59,13 @@ wss.on("connection", (conn) => {
   let closed = false;
 
   conn.on("message", (raw) => {
+    // Reject oversized messages to prevent memory abuse
+    const rawStr = typeof raw === "string" ? raw : raw.toString();
+    if (rawStr.length > 65536) return;
+
     let message;
     try {
-      message = typeof raw === "string" ? JSON.parse(raw) : JSON.parse(raw.toString());
+      message = JSON.parse(rawStr);
     } catch (e) {
       return;
     }

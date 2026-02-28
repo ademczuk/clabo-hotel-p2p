@@ -57,24 +57,68 @@ if (existsSync(rendererConfigPath)) {
 
   // Replace placeholder URLs with a known public Habbo asset server
   // Users should update these to their own asset server for production
+  let patched = false;
   if (content.includes('"https://website.com"')) {
     content = content.replace(
       '"https://website.com"',
       '"https://swf.habboclient.net"'
     );
+    patched = true;
+  }
+  if (content.includes('"https://website.com/c_images/"')) {
     content = content.replace(
       '"https://website.com/c_images/"',
       '"https://swf.habboclient.net/c_images/"'
     );
+    patched = true;
+  }
+  if (content.includes('"https://website.com/dcr/hof_furni"')) {
+    content = content.replace(
+      '"https://website.com/dcr/hof_furni"',
+      '"https://swf.habboclient.net/dcr/hof_furni"'
+    );
+    patched = true;
+  }
+  if (content.includes('"wss://ws.website.com:2096"')) {
     content = content.replace(
       '"wss://ws.website.com:2096"',
       '"wss://localhost:4444"'
     );
+    patched = true;
+  }
+  if (patched) {
     writeFileSync(rendererConfigPath, content);
     ok("Patched renderer-config.json with default asset server URLs");
     log("  (Edit apps/frontend/public/renderer-config.json to use your own asset server)");
   } else {
     ok("renderer-config.json already has custom URLs");
+  }
+}
+
+// ── 3b. Patch ui-config.json placeholder URLs ─────────────────────
+const uiConfigPath = resolve(FRONTEND_PUBLIC, "ui-config.json");
+if (existsSync(uiConfigPath)) {
+  let uiContent = readFileSync(uiConfigPath, "utf-8");
+  let uiPatched = false;
+  if (uiContent.includes('"https://website.com"')) {
+    uiContent = uiContent.replace(
+      '"https://website.com"',
+      '"https://swf.habboclient.net"'
+    );
+    uiPatched = true;
+  }
+  if (uiContent.includes('"https://camera.url"')) {
+    uiContent = uiContent.replace(
+      /"https:\/\/camera\.url"/g,
+      '"https://swf.habboclient.net"'
+    );
+    uiPatched = true;
+  }
+  if (uiPatched) {
+    writeFileSync(uiConfigPath, uiContent);
+    ok("Patched ui-config.json placeholder URLs");
+  } else {
+    ok("ui-config.json already has custom URLs");
   }
 }
 

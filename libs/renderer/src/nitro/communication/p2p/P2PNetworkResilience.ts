@@ -51,6 +51,7 @@ export class P2PNetworkResilience {
   private _destroyed: boolean;
   private _connectionMonitor: any;
   private _wasConnected: boolean;
+  private _heartbeatObserver: (() => void) | null;
 
   // Metrics
   private _metrics: {
@@ -90,6 +91,7 @@ export class P2PNetworkResilience {
     this._destroyed = false;
     this._connectionMonitor = null;
     this._wasConnected = false;
+    this._heartbeatObserver = null;
 
     this._metrics = {
       heartbeatsSent: 0,
@@ -110,10 +112,11 @@ export class P2PNetworkResilience {
     // Start garbage collection (dead peer detection)
     this._gcInterval = setInterval(() => this.detectDeadPeers(), this._config.gcIntervalMs);
 
-    // Observe heartbeat changes for seeder election
-    this._heartbeatMap.observe(() => {
+    // Observe heartbeat changes for seeder election (store ref for cleanup)
+    this._heartbeatObserver = () => {
       if (!this._destroyed) this.electSeeder();
-    });
+    };
+    this._heartbeatMap.observe(this._heartbeatObserver);
 
     NitroLogger.log("[P2P Resilience] Started for peer:", this._localPeerId);
   }
@@ -313,6 +316,12 @@ export class P2PNetworkResilience {
     if (this._connectionMonitor) {
       clearInterval(this._connectionMonitor);
       this._connectionMonitor = null;
+    }
+
+    // Unregister heartbeat observer
+    if (this._heartbeatMap && this._heartbeatObserver) {
+      try { this._heartbeatMap.unobserve(this._heartbeatObserver); } catch (e) { /* */ }
+      this._heartbeatObserver = null;
     }
 
     // Remove our heartbeat
