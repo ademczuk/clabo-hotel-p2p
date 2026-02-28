@@ -1,0 +1,17 @@
+{
+  "name": "hermit-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "The Hermit - AI concierge bot for P2P Habbo Hotel",
+  "main": "bot.mjs",
+  "scripts": {
+    "start": "node bot.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.5",
+    "ws": "^8.16.0",
+    "y-websocket": "^2.0.4",
+    "yjs": "^13.6.10"
+  }
+}

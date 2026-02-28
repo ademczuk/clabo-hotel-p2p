@@ -137,6 +137,31 @@ if (!existsSync(signalingModules)) {
   ok("Signaling server dependencies already installed");
 }
 
+// ── 4b. Install Hermit bot dependencies ──────────────────────────
+const botDir = resolve(ROOT, "hermit-bot");
+const botModules = resolve(botDir, "node_modules");
+if (existsSync(botDir)) {
+  if (!existsSync(botModules)) {
+    log("Installing Hermit bot dependencies...");
+    try {
+      execSync("npm install", { cwd: botDir, stdio: "inherit" });
+      ok("Hermit bot dependencies installed");
+    } catch (e) {
+      warn("Failed to install Hermit bot deps: " + e.message);
+    }
+  } else {
+    ok("Hermit bot dependencies already installed");
+  }
+
+  // Copy .env.example → .env if not exists
+  const botEnvExample = resolve(botDir, ".env.example");
+  const botEnv = resolve(botDir, ".env");
+  if (existsSync(botEnvExample) && !existsSync(botEnv)) {
+    copyFileSync(botEnvExample, botEnv);
+    ok("Copied hermit-bot/.env.example → .env (edit with your Anthropic API key)");
+  }
+}
+
 // ── 5. Summary ─────────────────────────────────────────────────────
 console.log(`
 ╔══════════════════════════════════════════════════════════╗
@@ -144,14 +169,17 @@ console.log(`
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  Quick Start:                                            ║
-║    npm run signaling   # Start signaling server (:4444)  ║
-║    npm run dev         # Start dev server (:4200)        ║
+║    npm run start       # Signaling + relay + dev server  ║
 ║                                                          ║
-║  Or run both together:                                   ║
-║    npm run start       # Signaling + dev server          ║
+║  With The Hermit AI bot:                                 ║
+║    npm run start:bot   # All servers + Hermit bot        ║
+║    (Set ANTHROPIC_API_KEY in hermit-bot/.env first)      ║
 ║                                                          ║
-║  Build for production:                                   ║
-║    npm run build       # Build renderer + frontend       ║
+║  Individual services:                                    ║
+║    npm run signaling   # y-webrtc signaling (:4444)      ║
+║    npm run ws-relay    # y-websocket relay  (:4445)      ║
+║    npm run dev         # Frontend dev server (:4200)     ║
+║    npm run hermit      # The Hermit AI bot               ║
 ║                                                          ║
 ║  Multi-peer testing:                                     ║
 ║    Open http://localhost:4200 in multiple browser tabs    ║
@@ -160,6 +188,7 @@ console.log(`
 ║  Config files:                                           ║
 ║    apps/frontend/public/renderer-config.json              ║
 ║    apps/frontend/public/ui-config.json                    ║
+║    hermit-bot/.env                                       ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
 `);

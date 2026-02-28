@@ -21,6 +21,8 @@ import * as Y from "yjs";
 // @ts-ignore
 import { WebrtcProvider } from "y-webrtc";
 // @ts-ignore
+import { WebsocketProvider } from "y-websocket";
+// @ts-ignore
 import { IndexeddbPersistence } from "y-indexeddb";
 import { BinaryWriter, NitroLogger } from "../../../api";
 import { IncomingHeader } from "../messages/incoming/IncomingHeader";
@@ -88,6 +90,7 @@ export class P2PRoomState {
   private _connection: P2PLoopbackConnection;
   private _doc: Y.Doc;
   private _provider: WebrtcProvider | null;
+  private _wsProvider: WebsocketProvider | null;
   private _persistence: IndexeddbPersistence | null;
   private _userPositions: Y.Map<any>;
   private _roomMeta: Y.Map<any>;
@@ -131,6 +134,7 @@ export class P2PRoomState {
     this._connection = connection;
     this._doc = null;
     this._provider = null;
+    this._wsProvider = null;
     this._persistence = null;
     this._userPositions = null;
     this._roomMeta = null;
@@ -745,6 +749,33 @@ export class P2PRoomState {
       this._persistence = null;
     }
 
+    // y-websocket provider — bridges headless peers (e.g. The Hermit bot)
+    // Connects to the y-websocket relay server on port 4445.
+    // If the relay is not running, the provider will reconnect periodically in the background.
+    try {
+      const wLoc = typeof window !== 'undefined' ? window.location : null;
+      const wsProtocol = wLoc?.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = wLoc?.hostname || 'localhost';
+      this._wsProvider = new WebsocketProvider(
+        `${wsProtocol}//${wsHost}:4445`,
+        "p2p-nitro-" + this._roomName,
+        this._doc
+      );
+      this._wsProvider.on('sync', (isSynced: boolean) => {
+        if (isSynced) {
+          NitroLogger.log("[P2P] y-websocket synced (bot bridge ready)");
+          if (!this._chatReady) {
+            this._chatReady = true;
+            NitroLogger.log("[P2P] Chat ready via y-websocket sync");
+          }
+        }
+      });
+      NitroLogger.log("[P2P] y-websocket provider created (relay: " + wsHost + ":4445)");
+    } catch (e) {
+      NitroLogger.warn("[P2P] y-websocket provider unavailable:", e);
+      this._wsProvider = null;
+    }
+
     // Create WebRTC provider - defer until signaling server is confirmed available
     // For now, run in solo mode to avoid signaling spam
     this._provider = null;
@@ -1265,10 +1296,14 @@ export class P2PRoomState {
       this._resilience = null;
     }
 
-    // Destroy provider and persistence
+    // Destroy providers and persistence
     if (this._provider) {
       this._provider.destroy();
       this._provider = null;
+    }
+    if (this._wsProvider) {
+      this._wsProvider.destroy();
+      this._wsProvider = null;
     }
     if (this._persistence) {
       try { this._persistence.destroy(); } catch (e) { /* */ }

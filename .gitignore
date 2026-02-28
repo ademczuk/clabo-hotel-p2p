@@ -39,3 +39,10 @@ testem.log
 Thumbs.db
 
 apps/**/public/*.json
+
+# Bot secrets
+hermit-bot/.env
+
+# Test artifacts
+test-hermit-screenshot.png
+test-hermit.cjs

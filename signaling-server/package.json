@@ -2,12 +2,15 @@
   "name": "p2p-signaling-server",
   "version": "1.0.0",
   "type": "module",
-  "description": "y-webrtc signaling server for P2P Habbo Hotel",
+  "description": "y-webrtc signaling + y-websocket relay for P2P Habbo Hotel",
   "main": "server.mjs",
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "ws-relay": "node ws-server.mjs"
   },
   "dependencies": {
-    "ws": "^8.16.0"
+    "ws": "^8.16.0",
+    "y-websocket": "^2.0.4",
+    "yjs": "^13.6.10"
   }
 }
