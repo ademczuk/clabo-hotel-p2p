@@ -2,7 +2,15 @@
   "name": "nitro",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "npx nx serve frontend",
+    "build": "npx nx build renderer && npx nx build frontend",
+    "signaling": "cd signaling-server && node server.mjs",
+    "start": "concurrently \"npm run signaling\" \"npm run dev\"",
+    "build:renderer": "npx nx build renderer",
+    "build:frontend": "npx nx build frontend"
+  },
   "private": true,
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",

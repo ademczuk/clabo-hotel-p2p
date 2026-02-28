@@ -16,7 +16,7 @@ export default defineConfig({
 
   server: {
     port: 4200,
-    host: "localhost",
+    host: "0.0.0.0",
     fs: {
       allow: [searchForWorkspaceRoot(process.cwd())],
     },
@@ -24,7 +24,7 @@ export default defineConfig({
 
   preview: {
     port: 4300,
-    host: "localhost",
+    host: "0.0.0.0",
   },
 
   plugins: [
