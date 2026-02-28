@@ -20,6 +20,14 @@ export default defineConfig({
     fs: {
       allow: [searchForWorkspaceRoot(process.cwd())],
     },
+    proxy: {
+      "/proxy-assets": {
+        target: "https://assets.nitrodev.co",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy-assets/, ""),
+        secure: true,
+      },
+    },
   },
 
   preview: {

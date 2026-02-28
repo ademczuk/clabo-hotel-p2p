@@ -290,7 +290,7 @@ export class P2PRoomState {
   private _walkTimer: any;
   private _isWalking: boolean;
   private _chatReady: boolean;
-  private _firstGuestRoomDone: boolean;
+
 
   // Stored observer refs for cleanup
   private _userPositionsObserver: ((event: Y.YMapEvent<any>) => void) | null;
@@ -331,7 +331,7 @@ export class P2PRoomState {
     this._walkTimer = null;
     this._isWalking = false;
     this._chatReady = false;
-    this._firstGuestRoomDone = false;
+
     this._userPositionsObserver = null;
     this._chatMessagesObserver = null;
     this._signalingConnectTimeout = null;
@@ -370,7 +370,8 @@ export class P2PRoomState {
         break;
       case OutgoingHeader.GET_GUEST_ROOM:
         // GetGuestRoomMessageComposer → respond with room info
-        this.handleGetGuestRoom(args[0] as number);
+        // args: [roomId, enterRoom, forwardRoom]
+        this.handleGetGuestRoom(args[0] as number, !!(args[2] as number));
         break;
       case OutgoingHeader.GET_USER_FLAT_CATS:
         this.sendUserFlatCats();
@@ -537,15 +538,11 @@ export class P2PRoomState {
   /**
    * Called when the client sends GetGuestRoomMessageComposer (OutgoingHeader.GET_GUEST_ROOM)
    * Responds with ROOM_INFO (687) containing full room data.
-   * When called from TryVisitRoom, roomForward must be true to trigger CreateRoomSession.
+   * @param forwardRoom - passed from the client; true only when TryVisitRoom triggers a room forward
    */
-  private handleGetGuestRoom(roomId: number): void {
-    const isFirstRequest = !this._firstGuestRoomDone;
-    this._firstGuestRoomDone = true;
-    NitroLogger.log("[P2P] GetGuestRoom for room:", roomId, "isFirst:", isFirstRequest);
-    // Only set roomForward=true for the first request (which triggers CreateRoomSession).
-    // Subsequent requests are info refreshes and should NOT recreate the session.
-    this.sendGuestRoomResult(roomId || this._roomId, false, isFirstRequest);
+  private handleGetGuestRoom(roomId: number, forwardRoom: boolean = false): void {
+    NitroLogger.log("[P2P] GetGuestRoom for room:", roomId, "forward:", forwardRoom);
+    this.sendGuestRoomResult(roomId || this._roomId, false, forwardRoom);
   }
 
   /**

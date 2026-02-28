@@ -375,7 +375,15 @@ export class RoomEngine
 
     const instance = this.setupRoomInstance(roomId, roomMap, floorType, wallType, landscapeType, this.getRoomInstanceModelName(roomId));
 
-    if (!instance) return;
+    if (!instance) {
+      // Room may already exist from a prior creation (race between engine init drain and message handler).
+      // If so, still fire INITIALIZED so the UI can attach the canvas.
+      if (this.getRoomInstance(roomId)) {
+        this.events.dispatchEvent(new RoomEngineEvent(RoomEngineEvent.INITIALIZED, roomId));
+      }
+
+      return;
+    }
 
     if (roomMap.restrictsDragging) {
       this._roomAllowsDragging = false;

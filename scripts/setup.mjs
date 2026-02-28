@@ -61,21 +61,21 @@ if (existsSync(rendererConfigPath)) {
   if (content.includes('"https://website.com"')) {
     content = content.replace(
       '"https://website.com"',
-      '"https://swf.habboclient.net"'
+      '"https://assets.nitrodev.co"'
     );
     patched = true;
   }
   if (content.includes('"https://website.com/c_images/"')) {
     content = content.replace(
       '"https://website.com/c_images/"',
-      '"https://swf.habboclient.net/c_images/"'
+      '"https://assets.nitrodev.co/c_images/"'
     );
     patched = true;
   }
   if (content.includes('"https://website.com/dcr/hof_furni"')) {
     content = content.replace(
       '"https://website.com/dcr/hof_furni"',
-      '"https://swf.habboclient.net/dcr/hof_furni"'
+      '"https://assets.nitrodev.co/dcr/hof_furni"'
     );
     patched = true;
   }
@@ -103,14 +103,14 @@ if (existsSync(uiConfigPath)) {
   if (uiContent.includes('"https://website.com"')) {
     uiContent = uiContent.replace(
       '"https://website.com"',
-      '"https://swf.habboclient.net"'
+      '"https://assets.nitrodev.co"'
     );
     uiPatched = true;
   }
   if (uiContent.includes('"https://camera.url"')) {
     uiContent = uiContent.replace(
       /"https:\/\/camera\.url"/g,
-      '"https://swf.habboclient.net"'
+      '"https://assets.nitrodev.co"'
     );
     uiPatched = true;
   }
