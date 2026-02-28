@@ -2,6 +2,19 @@
 
 A peer-to-peer Habbo Hotel client built on top of the [Nitro](https://github.com/nicknb-clabo/nitro) monorepo. Instead of connecting to a traditional Habbo server, this client uses **Yjs + y-webrtc** for real-time state synchronization between peers, with a lightweight WebSocket signaling server for peer discovery.
 
+![Multiple users chatting in a furnished room with The Hermit AI bot](readme-screenshot.png)
+
+*Users chatting with The Hermit — an AI concierge powered by Claude that lives in every room.*
+
+## Features
+
+- **No server required** — fully peer-to-peer room state via WebRTC
+- **Pre-furnished rooms** — 41 room models with themed furniture layouts (lounges, cafes, bedrooms, libraries)
+- **AI concierge** — The Hermit, a Claude-powered bot that greets visitors and chats in-character
+- **Multi-room navigator** — browse and switch between rooms with the in-game navigator
+- **Walk, talk, explore** — BFS pathfinding, real-time chat bubbles, avatar rendering with Habbo sprites
+- **Resilient networking** — heartbeat-based dead peer detection, automatic seeder election, reconnection with backoff
+
 ## Architecture
 
 ```
@@ -62,11 +75,19 @@ A peer-to-peer Habbo Hotel client built on top of the [Nitro](https://github.com
 # 1. Install dependencies
 pnpm install
 
-# 2. Start the signaling server (optional, for multi-peer)
+# 2. Start the signaling server (peer discovery)
 cd signaling-server && npm install && node server.mjs &
 cd ..
 
-# 3. Start the development server
+# 3. Start the WebSocket relay (bridges the Hermit bot)
+cd ws-relay && npm install && node server.mjs &
+cd ..
+
+# 4. Start the Hermit bot (optional AI concierge)
+cd hermit-bot && npm install && node bot.mjs &
+cd ..
+
+# 5. Start the development server
 npx nx serve frontend
 ```
 
@@ -78,14 +99,16 @@ Open `http://localhost:4200` in two or more browser tabs/windows. Each tab gets 
 - Each peer's avatar appears in the room
 - Walking is synchronized across peers
 - Chat bubbles appear for all peers
+- The Hermit bot greets new visitors and responds to chat
 
 ### Room Selection
 
-Append a hash to the URL to join different rooms:
-- `http://localhost:4200/#lobby` — joins the "lobby" room
-- `http://localhost:4200/#party` — joins the "party" room
+Use the in-game navigator (bottom toolbar) to browse and enter rooms, or append a hash to the URL:
+- `http://localhost:4200/#model-a:model_a` — small room
+- `http://localhost:4200/#model-e:model_e` — medium room
+- `http://localhost:4200/#model-basa:model_basa` — large open room
 
-Peers in the same room (same hash) will see each other.
+Peers in the same room will see each other.
 
 ## Building for Production
 
@@ -126,7 +149,7 @@ Uses `window.screen.width` / `window.screen.height` instead of `window.innerWidt
 ## Project Structure
 
 ```
-nitro-base/
+clabo-hotel-p2p/
 ├── apps/
 │   └── frontend/           # React frontend application
 │       └── src/
@@ -143,13 +166,16 @@ nitro-base/
 │                   └── p2p/        # All P2P code
 │                       ├── P2PLoopbackConnection.ts
 │                       ├── P2PCommunicationManager.ts
-│                       ├── P2PRoomState.ts
+│                       ├── P2PRoomState.ts      # Core room state + furniture injection
 │                       ├── P2PNetworkResilience.ts
+│                       ├── RoomModels.ts        # 41 room heightmaps + navigator
+│                       ├── RoomFurniture.ts     # Pre-defined furniture layouts
 │                       └── index.ts
-├── signaling-server/       # WebSocket signaling server
-│   ├── server.mjs
-│   └── package.json
-└── package.json            # Root dependencies (includes yjs, y-webrtc)
+├── signaling-server/       # WebSocket signaling for y-webrtc peer discovery
+├── ws-relay/               # y-websocket relay (bridges headless bots to browser peers)
+├── hermit-bot/             # The Hermit — Claude-powered AI concierge bot
+│   └── bot.mjs
+└── package.json
 ```
 
 ## Credits

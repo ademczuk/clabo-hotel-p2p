@@ -242,6 +242,11 @@ const greetedPeers = new Set();
 let lastGreetingTime = 0;
 
 function announcePresence() {
+  // Spawn a few tiles inside the room (away from walls and entry)
+  // For model_a: walkable x=4-11, y=1-13, entry (3,5)
+  // Default position works for most models; stays clear of doorways
+  const spawnX = 7;
+  const spawnY = 8;
   userPositions.set(BOT_PEER_ID, {
     peerId: BOT_PEER_ID,
     unitId: BOT_UNIT_ID,
@@ -250,14 +255,14 @@ function announcePresence() {
     figure: BOT_FIGURE,
     sex: BOT_SEX,
     motto: BOT_MOTTO,
-    x: 3,
-    y: 3,
+    x: spawnX,
+    y: spawnY,
     z: 0,
     dir: 4,
-    prevX: 3,
-    prevY: 3,
-    targetX: 3,
-    targetY: 3,
+    prevX: spawnX,
+    prevY: spawnY,
+    targetX: spawnX,
+    targetY: spawnY,
     targetZ: 0,
     didMove: false,
   });

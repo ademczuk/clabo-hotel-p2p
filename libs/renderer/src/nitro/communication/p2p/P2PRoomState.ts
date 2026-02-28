@@ -32,6 +32,8 @@ import type { P2PLoopbackConnection } from "./P2PLoopbackConnection";
 import type { IMessageComposer } from "../../../api";
 import { ROOM_MODELS, DEFAULT_MODEL_KEY, getModel, parseRoomHash, getAllModelKeys } from "./RoomModels";
 import type { RoomModelDef } from "./RoomModels";
+import { getFurnitureLayout } from "./RoomFurniture";
+import type { FloorItem, WallItem } from "./RoomFurniture";
 
 const DEFAULT_ROOM_ID = 1;
 
@@ -238,6 +240,10 @@ export class P2PRoomState {
       case OutgoingHeader.UNIT_ACTION:
       case OutgoingHeader.UNIT_DANCE:
       case OutgoingHeader.UNIT_LOOK:
+      case OutgoingHeader.FURNITURE_PLACE:
+      case OutgoingHeader.FURNITURE_PICKUP:
+      case OutgoingHeader.FURNITURE_MULTISTATE:
+      case OutgoingHeader.FURNITURE_FLOOR_UPDATE:
         break; // Silently ignore
       default:
         NitroLogger.log("[P2P] Unhandled outgoing:", header, name);
@@ -609,6 +615,9 @@ export class P2PRoomState {
     // Room info (GetGuestRoomResult = ROOM_INFO = 687) with roomEnter=true
     this.sendGuestRoomResult(this._roomId, true, false);
 
+    // Pre-defined furniture for this room model
+    this.sendRoomFurniture();
+
     // Spawn local user and start P2P
     setTimeout(() => {
       this.sendLocalUserUnit();
@@ -687,6 +696,79 @@ export class P2PRoomState {
     w.writeInt(0); w.writeInt(1); w.writeInt(1); w.writeInt(50); w.writeInt(0);
 
     this.injectRawPacket(w);
+  }
+
+  /**
+   * Inject pre-defined furniture for the current room model.
+   * Sends FURNITURE_FLOOR (1778) and ITEM_WALL (1369) packets.
+   */
+  private sendRoomFurniture(): void {
+    const layout = getFurnitureLayout(this._modelKey);
+    if (!layout) {
+      NitroLogger.log("[P2P] No furniture layout for model:", this._modelKey);
+      return;
+    }
+
+    NitroLogger.log("[P2P] Sending furniture: " + layout.floor.length + " floor, " + layout.wall.length + " wall items");
+
+    // ── Floor items ──────────────────────────────────────────────
+    if (layout.floor.length > 0) {
+      const w = new BinaryWriter();
+      w.writeShort(IncomingHeader.FURNITURE_FLOOR);
+
+      // Owners block: 1 owner
+      w.writeInt(1);
+      w.writeInt(this._localUserId);
+      w.writeString("Room", true);
+
+      // Items block
+      w.writeInt(layout.floor.length);
+      for (let i = 0; i < layout.floor.length; i++) {
+        const item = layout.floor[i];
+        w.writeInt(10000 + i);                              // itemId
+        w.writeInt(item.spriteId);                          // spriteId
+        w.writeInt(item.x);                                 // x
+        w.writeInt(item.y);                                 // y
+        w.writeInt(item.dir);                               // direction (raw, parser does %8*45)
+        w.writeString(String(item.z || 0), true);           // z height
+        w.writeString(String(item.stackHeight ?? 1), true); // stackHeight
+        w.writeInt(0);                                      // extra
+        // ObjectData: LegacyDataType (type=0) + legacy string
+        w.writeInt(0);                                      // objectDataType = LEGACY_KEY
+        w.writeString(item.state || "0", true);             // legacy string (state)
+        w.writeInt(0);                                      // expires
+        w.writeInt(0);                                      // usagePolicy
+        w.writeInt(this._localUserId);                      // userId (owner)
+      }
+
+      this.injectRawPacket(w);
+    }
+
+    // ── Wall items ───────────────────────────────────────────────
+    if (layout.wall.length > 0) {
+      const w = new BinaryWriter();
+      w.writeShort(IncomingHeader.ITEM_WALL);
+
+      // Owners block: 1 owner
+      w.writeInt(1);
+      w.writeInt(this._localUserId);
+      w.writeString("Room", true);
+
+      // Items block
+      w.writeInt(layout.wall.length);
+      for (let i = 0; i < layout.wall.length; i++) {
+        const item = layout.wall[i];
+        w.writeString(String(20000 + i), true);  // itemId (STRING for wall items)
+        w.writeInt(item.spriteId);               // spriteId
+        w.writeString(item.location, true);      // wall position
+        w.writeString(item.state || "0", true);  // stuffData / state
+        w.writeInt(0);                           // secondsToExpiration
+        w.writeInt(0);                           // usagePolicy
+        w.writeInt(this._localUserId);           // userId (owner)
+      }
+
+      this.injectRawPacket(w);
+    }
   }
 
   private sendLocalUserUnit(): void {
