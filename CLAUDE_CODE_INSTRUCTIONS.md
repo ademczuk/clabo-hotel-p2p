@@ -135,4 +135,4 @@ Verify that `P2PRoomState.ts` sends the heightmap with `true` (not `false`) as t
 3. Ensure both peers are using the same room hash in the URL
 
 ### Peers behind corporate/mobile NAT can't connect
-Add a TURN server to the ICE config in `P2PRoomState.ts`. See the Claude Code skill (`clabo-hotel-p2p`) for details.
+Free TURN servers from the Open Relay Project (openrelay.metered.ca) are now included by default in the ICE config in `P2PRoomState.ts`. These provide 20 GB/month of free relay traffic and should handle most NAT traversal scenarios including corporate firewalls (ports 80 and 443 with TLS). For production deployments with sustained traffic, self-host coturn instead.

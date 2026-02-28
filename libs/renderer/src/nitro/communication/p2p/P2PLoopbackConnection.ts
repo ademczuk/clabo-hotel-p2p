@@ -73,7 +73,7 @@ export class P2PLoopbackConnection extends EventDispatcher implements IConnectio
       this.dispatchEvent(new SocketConnectionEvent(
         SocketConnectionEvent.CONNECTION_OPENED, this, new Event("open")
       ));
-    }, 100);
+    }, 500);
   }
 
   protected override onDispose(): void {

@@ -29,34 +29,184 @@ import { P2PNetworkResilience } from "./P2PNetworkResilience";
 import type { P2PLoopbackConnection } from "./P2PLoopbackConnection";
 import type { IMessageComposer } from "../../../api";
 
-// Default heightmap for a simple room (model "a")
-// Model "a" heightmap - the door tile is at (3,5) which is the boundary
-// between blocked (x) and open (0) tiles. The door detection algorithm
-// looks for tiles where adjacent tiles are blocked on 3 sides.
-// We place the door at x=3 by making that column open in the door row.
-const DEFAULT_HEIGHTMAP =
-  "xxxxxxxxxxxx\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxx000000000\r" +
-  "xxx000000000\r" +
-  "xx0000000000\r" +
-  "xxx000000000\r" +
-  "xxx000000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r" +
-  "xxxxx0000000\r";
+// ─── Room Models ─────────────────────────────────────────────────
+// Standard Habbo room models. URL hash format: #room-name or #room-name:model_b
+interface RoomModelDef {
+  heightmap: string;
+  entryX: number;
+  entryY: number;
+  entryDir: number;
+  modelName: string;
+}
 
+const ROOM_MODELS: Record<string, RoomModelDef> = {
+  model_a: {
+    modelName: "model_a",
+    entryX: 2, entryY: 5, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxx\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxx000000000\r" +
+      "xxx000000000\r" +
+      "xx0000000000\r" +
+      "xxx000000000\r" +
+      "xxx000000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r",
+  },
+  model_b: {
+    modelName: "model_b",
+    entryX: 0, entryY: 5, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxx\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "x00000000000\r" +
+      "x00000000000\r" +
+      "x00000000000\r" +
+      "x00000000000\r" +
+      "x00000000000\r" +
+      "x00000000000\r" +
+      "xxxxxxxxxxxx\r",
+  },
+  model_c: {
+    modelName: "model_c",
+    entryX: 4, entryY: 7, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxxx\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxxxxxxxxxxx\r",
+  },
+  model_d: {
+    modelName: "model_d",
+    entryX: 4, entryY: 7, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxxx\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxxx00000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "xxxx000000000\r" +
+      "x000000000000\r" +
+      "x000000000000\r" +
+      "x000000000000\r" +
+      "x000000000000\r" +
+      "x000000000000\r" +
+      "x000000000000\r" +
+      "xxxxxxxxxxxxx\r",
+  },
+  model_e: {
+    modelName: "model_e",
+    entryX: 1, entryY: 5, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxx\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xxxxx0000000\r" +
+      "xx0000000000\r" +
+      "xx0000000000\r" +
+      "xx0000000000\r" +
+      "xx0000000000\r" +
+      "xx0000000000\r" +
+      "xx0000000000\r" +
+      "xxxxxxxxxxxx\r",
+  },
+  model_f: {
+    modelName: "model_f",
+    entryX: 1, entryY: 5, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxxxxxxx\r" +
+      "xxxxxxx0000000000\r" +
+      "xxxxxxx0000000000\r" +
+      "xxxxxxx0000000000\r" +
+      "xxxxxxx0000000000\r" +
+      "xx000000000000000\r" +
+      "xx000000000000000\r" +
+      "xx000000000000000\r" +
+      "xx000000000000000\r" +
+      "xx000000000000000\r" +
+      "xx000000000000000\r" +
+      "xxxxxxxxxxxxxxxxx\r",
+  },
+  model_i: {
+    modelName: "model_i",
+    entryX: 0, entryY: 10, entryDir: 2,
+    heightmap:
+      "xxxxxxxxxxxxxxxxx\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "x0000000000000000\r" +
+      "xxxxxxxxxxxxxxxxx\r",
+  },
+};
+
+const DEFAULT_MODEL_KEY = "model_a";
 const DEFAULT_ROOM_ID = 1;
-const DEFAULT_ROOM_MODEL = "model_a";
-const ENTRY_TILE_X = 2;
-const ENTRY_TILE_Y = 5;
-const ENTRY_TILE_DIR = 2;
+
+/** Parse URL hash: #room-name or #room-name:model_b */
+function parseRoomHash(hash: string): { roomName: string; modelKey: string } {
+  const clean = hash.replace("#", "").trim();
+  if (!clean) return { roomName: "p2p-lobby", modelKey: DEFAULT_MODEL_KEY };
+  const parts = clean.split(":");
+  const roomName = parts[0] || "p2p-lobby";
+  const modelKey = (parts[1] && ROOM_MODELS[parts[1]]) ? parts[1] : DEFAULT_MODEL_KEY;
+  return { roomName, modelKey };
+}
+
+function getModel(key: string): RoomModelDef {
+  return ROOM_MODELS[key] || ROOM_MODELS[DEFAULT_MODEL_KEY];
+}
 
 // Default figure strings for avatars
 const DEFAULT_FIGURES = [
@@ -129,6 +279,7 @@ export class P2PRoomState {
 
   private _roomId: number;
   private _roomName: string;
+  private _modelKey: string;
   private _isSeeder: boolean;
   private _isInRoom: boolean;
   private _knownPeers: Map<string, number>; // peerId -> unitId
@@ -169,6 +320,7 @@ export class P2PRoomState {
 
     this._roomId = DEFAULT_ROOM_ID;
     this._roomName = "p2p-lobby";
+    this._modelKey = DEFAULT_MODEL_KEY;
     this._isSeeder = false;
     this._isInRoom = false;
     this._knownPeers = new Map();
@@ -357,19 +509,19 @@ export class P2PRoomState {
     this._roomModelSent = false;
     this._roomId = roomId || DEFAULT_ROOM_ID;
     const hash = window.location.hash.replace("#", "");
-    this._roomName = hash || "p2p-lobby";
+    const parsed = parseRoomHash(hash);
+    this._roomName = parsed.roomName;
+    this._modelKey = parsed.modelKey;
 
-    NitroLogger.log("[P2P] Room enter request for room:", this._roomId, "name:", this._roomName);
+    NitroLogger.log("[P2P] Room enter request for room:", this._roomId, "name:", this._roomName, "model:", this._modelKey);
 
     // Step 1: ROOM_ENTER (incoming 758) - empty parser, just signals entry
     this._connection.injectIncomingMessage(IncomingHeader.ROOM_ENTER);
 
     // Step 2: ROOM_MODEL_NAME (incoming 2031) - triggers RoomReadyMessageEvent
-    // The RoomMessageHandler.onRoomReadyMessageEvent will:
-    //   - If _initialConnection: send FurnitureAliasesComposer → we handle in sendFurnitureAliases
-    //   - Else: send GetRoomEntryDataMessageComposer → we handle in sendRoomModelData
+    const model = getModel(this._modelKey);
     setTimeout(() => {
-      this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL_NAME, DEFAULT_ROOM_MODEL, this._roomId);
+      this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL_NAME, model.modelName, this._roomId);
     }, 100);
   }
 
@@ -421,13 +573,16 @@ export class P2PRoomState {
     this._roomModelSent = true;
     NitroLogger.log("[P2P] Sending room model data");
 
+    // Use the selected room model for heightmap and entry tile
+    const model = getModel(this._modelKey);
+
     // CRITICAL: Entry tile MUST come BEFORE FloorHeightMap!
     // onRoomModelEvent reads _latestEntryTileEvent to determine the door position.
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL_DOOR, ENTRY_TILE_X, ENTRY_TILE_Y, ENTRY_TILE_DIR);
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL_DOOR, model.entryX, model.entryY, model.entryDir);
 
     // FloorHeightMap (ROOM_MODEL = 1301) - the main room model
     // scale=true means parser._scale=32 which avoids restrictsScaling=true and restrictedScale=0.5
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL, true, -1, DEFAULT_HEIGHTMAP);
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL, true, -1, model.heightmap);
 
     // RoomHeightMap (ROOM_HEIGHT_MAP = 2753) - binary tile heights for stacking
     this.sendRoomHeightMap();
@@ -466,7 +621,8 @@ export class P2PRoomState {
   }
 
   private sendRoomHeightMap(): void {
-    const rows = DEFAULT_HEIGHTMAP.split("\r").filter(r => r.length > 0);
+    const model = getModel(this._modelKey);
+    const rows = model.heightmap.split("\r").filter(r => r.length > 0);
     const height = rows.length;
     const width = Math.max(...rows.map(r => r.length));
     const totalTiles = width * height;
@@ -547,10 +703,11 @@ export class P2PRoomState {
     w.writeString(this._localName, true);
     w.writeString(this._localMotto, true);
     w.writeString(this._localFigure, true);
+    const em = getModel(this._modelKey);
     w.writeInt(this._localUnitId);
-    w.writeInt(ENTRY_TILE_X); w.writeInt(ENTRY_TILE_Y);
+    w.writeInt(em.entryX); w.writeInt(em.entryY);
     w.writeString("0.0", true);
-    w.writeInt(2); // direction
+    w.writeInt(em.entryDir); // direction
     w.writeInt(1); // type = user
     w.writeString(this._localSex, true);
     w.writeInt(0); w.writeInt(0);
@@ -560,13 +717,14 @@ export class P2PRoomState {
   }
 
   private sendLocalUserStatus(): void {
+    const sm = getModel(this._modelKey);
     const w = new BinaryWriter();
     w.writeShort(IncomingHeader.UNIT_STATUS);
     w.writeInt(1);
     w.writeInt(this._localUnitId);
-    w.writeInt(ENTRY_TILE_X); w.writeInt(ENTRY_TILE_Y);
+    w.writeInt(sm.entryX); w.writeInt(sm.entryY);
     w.writeString("0.0", true);
-    w.writeInt(2); w.writeInt(2);
+    w.writeInt(sm.entryDir); w.writeInt(sm.entryDir);
     w.writeString("/flatctrl 4/", true);
     this.injectRawPacket(w);
   }
@@ -630,8 +788,10 @@ export class P2PRoomState {
       if (isSelf && this._roomMeta) {
         // Initialize room meta if not already set (first seeder or re-election after seeder drop)
         if (!this._roomMeta.get("initialized")) {
+          const initModel = getModel(this._modelKey);
           this._roomMeta.set("initialized", true);
-          this._roomMeta.set("heightmap", DEFAULT_HEIGHTMAP);
+          this._roomMeta.set("heightmap", initModel.heightmap);
+          this._roomMeta.set("modelKey", this._modelKey);
           this._roomMeta.set("roomId", this._roomId);
           this._roomMeta.set("roomName", this._roomName);
         }
@@ -739,6 +899,7 @@ export class P2PRoomState {
    */
   private announceLocalUser(): void {
     if (!this._userPositions) return;
+    const am = getModel(this._modelKey);
     this._userPositions.set(this._localPeerId, {
       peerId: this._localPeerId,
       unitId: this._localUnitId,
@@ -747,14 +908,14 @@ export class P2PRoomState {
       figure: this._localFigure,
       sex: this._localSex,
       motto: this._localMotto,
-      x: ENTRY_TILE_X,
-      y: ENTRY_TILE_Y,
+      x: am.entryX,
+      y: am.entryY,
       z: 0,
-      dir: 2,
-      prevX: ENTRY_TILE_X,
-      prevY: ENTRY_TILE_Y,
-      targetX: ENTRY_TILE_X,
-      targetY: ENTRY_TILE_Y,
+      dir: am.entryDir,
+      prevX: am.entryX,
+      prevY: am.entryY,
+      targetX: am.entryX,
+      targetY: am.entryY,
       targetZ: 0,
       didMove: false,
     });
@@ -767,7 +928,7 @@ export class P2PRoomState {
    * Returns array of {x, y} steps from start to end (excluding start).
    */
   private findPath(startX: number, startY: number, endX: number, endY: number): Array<{x: number, y: number}> {
-    const heightmap: string = this._roomMeta?.get("heightmap") || DEFAULT_HEIGHTMAP;
+    const heightmap: string = this._roomMeta?.get("heightmap") || getModel(this._modelKey).heightmap;
     const rows = heightmap.split("\r").filter((r: string) => r.length > 0);
     const maxY = rows.length;
     const maxX = rows[0]?.length || 0;
@@ -861,6 +1022,13 @@ export class P2PRoomState {
     };
 
     const processStep = () => {
+      // Guard: abort if room was destroyed mid-walk
+      if (!this._isInRoom || !this._connection) {
+        if (this._walkTimer) { clearInterval(this._walkTimer); this._walkTimer = null; }
+        this._isWalking = false;
+        this._walkQueue = [];
+        return;
+      }
       if (this._walkQueue.length === 0) {
         this._isWalking = false;
         if (this._walkTimer) { clearInterval(this._walkTimer); this._walkTimer = null; }
@@ -964,8 +1132,8 @@ export class P2PRoomState {
     w.writeString(data.motto || "", true);
     w.writeString(data.figure || randomFigure(), true);
     w.writeInt(unitId);
-    w.writeInt(data.x || ENTRY_TILE_X);
-    w.writeInt(data.y || ENTRY_TILE_Y);
+    w.writeInt(data.x ?? getModel(this._modelKey).entryX);
+    w.writeInt(data.y ?? getModel(this._modelKey).entryY);
     w.writeString((data.z || 0).toString(), true);
     w.writeInt(data.dir || 2);
     w.writeInt(1); // type = user
@@ -980,8 +1148,8 @@ export class P2PRoomState {
     sw.writeShort(IncomingHeader.UNIT_STATUS);
     sw.writeInt(1);
     sw.writeInt(unitId);
-    sw.writeInt(data.x || ENTRY_TILE_X);
-    sw.writeInt(data.y || ENTRY_TILE_Y);
+    sw.writeInt(data.x ?? getModel(this._modelKey).entryX);
+    sw.writeInt(data.y ?? getModel(this._modelKey).entryY);
     sw.writeString((data.z || 0).toString(), true);
     sw.writeInt(data.dir || 2); sw.writeInt(data.dir || 2);
     sw.writeString("/", true);
@@ -1174,8 +1342,11 @@ export class P2PRoomState {
               iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
                 { urls: "stun:stun1.l.google.com:19302" },
-                // Add TURN server here for NAT traversal in production:
-                // { urls: "turn:your-turn-server:3478", username: "user", credential: "pass" },
+                // Free TURN relay via Open Relay Project (openrelay.metered.ca)
+                // 20 GB/month free tier — replace with self-hosted coturn for production
+                { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turns:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
               ],
             },
           },
