@@ -49,6 +49,8 @@ export class P2PNetworkResilience {
 
   private _currentSeederId: string | null;
   private _destroyed: boolean;
+  private _connectionMonitor: any;
+  private _wasConnected: boolean;
 
   // Metrics
   private _metrics: {
@@ -86,6 +88,8 @@ export class P2PNetworkResilience {
 
     this._currentSeederId = null;
     this._destroyed = false;
+    this._connectionMonitor = null;
+    this._wasConnected = false;
 
     this._metrics = {
       heartbeatsSent: 0,
@@ -224,6 +228,40 @@ export class P2PNetworkResilience {
     return false;
   }
 
+  /**
+   * Monitor the signaling connection. If all signaling connections drop,
+   * trigger automatic reconnection with exponential backoff.
+   * Call this after the provider is set.
+   */
+  public monitorConnection(): void {
+    if (this._connectionMonitor || this._destroyed) return;
+
+    this._wasConnected = true;
+    this._connectionMonitor = setInterval(() => {
+      if (!this._provider || this._destroyed) {
+        clearInterval(this._connectionMonitor);
+        this._connectionMonitor = null;
+        return;
+      }
+
+      let anyConnected = false;
+      if (this._provider.signalingConns) {
+        for (const conn of this._provider.signalingConns) {
+          if (conn && conn.connected) { anyConnected = true; break; }
+        }
+      }
+
+      if (!anyConnected && this._wasConnected) {
+        this._wasConnected = false;
+        NitroLogger.log("[P2P Resilience] Signaling connection lost, attempting reconnect");
+        this.attemptReconnect();
+      } else if (anyConnected) {
+        this._wasConnected = true;
+        this._reconnectAttempts = 0;
+      }
+    }, 10000);
+  }
+
   // ─── Event Callbacks ───────────────────────────────────────
 
   public onPeerDeath(callback: (peerId: string) => void): void {
@@ -265,6 +303,11 @@ export class P2PNetworkResilience {
     if (this._gcInterval) {
       clearInterval(this._gcInterval);
       this._gcInterval = null;
+    }
+
+    if (this._connectionMonitor) {
+      clearInterval(this._connectionMonitor);
+      this._connectionMonitor = null;
     }
 
     // Remove our heartbeat

@@ -52,6 +52,10 @@ wss.on("connection", (conn) => {
   const subs = new Set();
   subscribedTopics.set(conn, subs);
 
+  // Track liveness for zombie detection
+  conn.isAlive = true;
+  conn.on("pong", () => { conn.isAlive = true; });
+
   let closed = false;
 
   conn.on("message", (raw) => {
@@ -139,6 +143,22 @@ wss.on("connection", (conn) => {
   conn.on("close", onClose);
   conn.on("error", onClose);
 });
+
+// Ping all clients every 30 seconds — terminate unresponsive zombie connections.
+// Without this, crashed browsers leave stale entries in the topics map forever.
+const PING_INTERVAL_MS = 30000;
+const pingInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      ws.terminate();
+      return;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, PING_INTERVAL_MS);
+
+wss.on("close", () => clearInterval(pingInterval));
 
 server.listen(PORT, () => {
   console.log(`[Signaling] y-webrtc signaling server running on port ${PORT}`);

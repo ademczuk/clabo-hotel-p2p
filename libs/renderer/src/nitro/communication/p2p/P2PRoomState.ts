@@ -75,6 +75,17 @@ function randomName(): string {
   return adjectives[Math.floor(Math.random() * adjectives.length)] + nouns[Math.floor(Math.random() * nouns.length)] + Math.floor(Math.random() * 999);
 }
 
+/** Deterministic unit ID from peerId — ensures all peers agree on the same ID for a given peer */
+function deterministicUnitId(peerId: string): number {
+  let hash = 0;
+  for (let i = 0; i < peerId.length; i++) {
+    hash = ((hash << 5) - hash + peerId.charCodeAt(i)) | 0;
+  }
+  return (Math.abs(hash) % 99999) + 1;
+}
+
+const MAX_CHAT_MESSAGES = 200;
+
 export interface P2PUserData {
   peerId: string;
   unitId: number;
@@ -117,7 +128,6 @@ export class P2PRoomState {
   private _isSeeder: boolean;
   private _isInRoom: boolean;
   private _knownPeers: Map<string, number>; // peerId -> unitId
-  private _nextUnitId: number;
   private _initialConnectionDone: boolean;
   private _roomEntryInProgress: boolean;
   private _roomModelSent: boolean;
@@ -125,7 +135,6 @@ export class P2PRoomState {
   private _walkTimer: any;
   private _isWalking: boolean;
   private _chatReady: boolean;
-  private _chatReadyTimestamp: number;
 
   constructor(connection: P2PLoopbackConnection) {
     this._connection = connection;
@@ -149,7 +158,6 @@ export class P2PRoomState {
     this._isSeeder = false;
     this._isInRoom = false;
     this._knownPeers = new Map();
-    this._nextUnitId = 1;
     this._initialConnectionDone = false;
     this._roomEntryInProgress = false;
     this._roomModelSent = false;
@@ -157,7 +165,6 @@ export class P2PRoomState {
     this._walkTimer = null;
     this._isWalking = false;
     this._chatReady = false;
-    this._chatReadyTimestamp = 0;
   }
 
   // ─── Outgoing Message Router ────────────────────────────────
@@ -478,8 +485,8 @@ export class P2PRoomState {
     // RoomDataParser fields:
     w.writeInt(roomId);                              // roomId
     w.writeString("P2P Room - " + this._roomName, true); // roomName
-    w.writeInt(this._localUserId);                   // ownerId
-    w.writeString(this._localName, true);            // ownerName
+    w.writeInt(this._roomMeta?.get("seederUserId") || this._localUserId); // ownerId (seeder = owner)
+    w.writeString(this._roomMeta?.get("seederName") || this._localName, true); // ownerName
     w.writeInt(0);                                   // doorMode (OPEN_STATE)
     w.writeInt(1);                                   // userCount
     w.writeInt(25);                                  // maxUserCount
@@ -513,7 +520,7 @@ export class P2PRoomState {
   }
 
   private sendLocalUserUnit(): void {
-    this._localUnitId = this._nextUnitId++;
+    this._localUnitId = deterministicUnitId(this._localPeerId);
     this._knownPeers.set(this._localPeerId, this._localUnitId);
 
     const w = new BinaryWriter();
@@ -584,9 +591,22 @@ export class P2PRoomState {
       this.onPeerLeft(deadPeerId);
     });
 
-    // When seeder changes, log it
+    // When seeder changes, initialize room meta if needed and track seeder identity
     this._resilience.onSeederChange((newSeederId: string, isSelf: boolean) => {
       this._isSeeder = isSelf;
+      if (isSelf && this._roomMeta) {
+        // Initialize room meta if not already set (first seeder or re-election after seeder drop)
+        if (!this._roomMeta.get("initialized")) {
+          this._roomMeta.set("initialized", true);
+          this._roomMeta.set("heightmap", DEFAULT_HEIGHTMAP);
+          this._roomMeta.set("roomId", this._roomId);
+          this._roomMeta.set("roomName", this._roomName);
+        }
+        // Store seeder identity so all peers agree on room owner
+        this._roomMeta.set("seederId", this._localPeerId);
+        this._roomMeta.set("seederName", this._localName);
+        this._roomMeta.set("seederUserId", this._localUserId);
+      }
       NitroLogger.log(`[P2P] Seeder changed to ${newSeederId}${isSelf ? " (this peer)" : ""}`);
     });
 
@@ -606,16 +626,8 @@ export class P2PRoomState {
     // Set local user position in shared state
     this.announceLocalUser();
 
-    // Check if we're the seeder (first to initialize room_meta)
-    const existingMeta = this._roomMeta.get("initialized");
-    if (!existingMeta) {
-      this._isSeeder = true;
-      this._roomMeta.set("initialized", true);
-      this._roomMeta.set("heightmap", DEFAULT_HEIGHTMAP);
-      this._roomMeta.set("roomId", this._roomId);
-      this._roomMeta.set("roomName", this._roomName);
-      NitroLogger.log("[P2P] This peer is the initial SEEDER");
-    }
+    // Seeder election is handled entirely by P2PNetworkResilience (lowest peerId wins).
+    // The onSeederChange callback above initializes room_meta when this peer becomes seeder.
 
     // Listen for changes to user_positions
     this._userPositions.observe((event: Y.YMapEvent<any>) => {
@@ -633,19 +645,17 @@ export class P2PRoomState {
     });
 
     // Listen for chat messages (with replay protection)
-    // Set _chatReady after a short delay to skip the initial sync replay
-    this._chatReadyTimestamp = Date.now();
+    // Gate on _chatReady to skip the initial Yjs sync replay of existing messages.
+    // No wall-clock comparison — clocks can differ across peers in a distributed system.
     setTimeout(() => { this._chatReady = true; }, 2000);
 
     this._chatMessages.observe((event: Y.YArrayEvent<any>) => {
-      if (!this._chatReady) return; // Skip initial sync replay
+      if (!this._chatReady) return;
       if (event.changes.added.size > 0) {
         event.changes.added.forEach((item) => {
           const content = item.content.getContent();
           for (const msg of content) {
             if (msg && msg.peerId !== this._localPeerId) {
-              // Also skip messages older than our join time
-              if (msg.timestamp && msg.timestamp < this._chatReadyTimestamp) return;
               this.onPeerChat(msg);
             }
           }
@@ -870,6 +880,14 @@ export class P2PRoomState {
         userId: this._localUserId, name: this._localName,
         message, type, timestamp: Date.now(),
       }]);
+
+      // Evict old messages to prevent unbounded growth
+      if (this._chatMessages.length > MAX_CHAT_MESSAGES) {
+        this._doc.transact(() => {
+          const excess = this._chatMessages.length - MAX_CHAT_MESSAGES;
+          if (excess > 0) this._chatMessages.delete(0, excess);
+        });
+      }
     }
   }
 
@@ -884,7 +902,7 @@ export class P2PRoomState {
 
     NitroLogger.log("[P2P] Peer joined:", peerId, data.name);
 
-    const unitId = this._nextUnitId++;
+    const unitId = data.unitId || deterministicUnitId(peerId);
     this._knownPeers.set(peerId, unitId);
 
     const w = new BinaryWriter();
@@ -1056,8 +1074,6 @@ export class P2PRoomState {
     const signalingServers = [
       localSignaling,
       "wss://signaling.yjs.dev",
-      "wss://y-webrtc-signaling-eu.herokuapp.com",
-      "wss://y-webrtc-signaling-us.herokuapp.com",
     ];
 
     // Try each server sequentially - create provider directly (no wasteful test connection)
@@ -1103,10 +1119,13 @@ export class P2PRoomState {
                 clearTimeout(connectTimeout);
                 clearInterval(checkConnected);
                 NitroLogger.log("[P2P] Signaling server connected:", server);
-                // Update resilience with the provider
+                // Update resilience with the provider and start connection monitoring
                 if (this._resilience) {
                   this._resilience.provider = this._provider;
+                  this._resilience.monitorConnection();
                 }
+                // Safe to enable chat now that initial sync can complete
+                this._chatReady = true;
                 return;
               }
             }
