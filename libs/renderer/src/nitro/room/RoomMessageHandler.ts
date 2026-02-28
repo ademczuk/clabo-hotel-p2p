@@ -343,6 +343,7 @@ export class RoomMessageHandler extends Disposable {
 
     const width = parser.width;
     const height = parser.height;
+
     const heightMap = new FurnitureStackingHeightMap(width, height);
 
     let y = 0;

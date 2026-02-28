@@ -262,6 +262,7 @@ export class AvatarLogic extends MovingObjectLogic {
       model.setValue(RoomObjectVariable.HEAD_DIRECTION, message.headDirection);
       model.setValue(RoomObjectVariable.FIGURE_CAN_STAND_UP, message.canStandUp);
       model.setValue(RoomObjectVariable.FIGURE_VERTICAL_OFFSET, message.baseY);
+      this.updateInterval = MovingObjectLogic.DEFAULT_UPDATE_INTERVAL;
 
       return;
     }

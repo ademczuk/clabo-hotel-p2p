@@ -28,185 +28,10 @@ import { OutgoingHeader } from "../messages/outgoing/OutgoingHeader";
 import { P2PNetworkResilience } from "./P2PNetworkResilience";
 import type { P2PLoopbackConnection } from "./P2PLoopbackConnection";
 import type { IMessageComposer } from "../../../api";
+import { ROOM_MODELS, DEFAULT_MODEL_KEY, getModel, parseRoomHash, getAllModelKeys } from "./RoomModels";
+import type { RoomModelDef } from "./RoomModels";
 
-// ─── Room Models ─────────────────────────────────────────────────
-// Standard Habbo room models. URL hash format: #room-name or #room-name:model_b
-interface RoomModelDef {
-  heightmap: string;
-  entryX: number;
-  entryY: number;
-  entryDir: number;
-  modelName: string;
-}
-
-const ROOM_MODELS: Record<string, RoomModelDef> = {
-  model_a: {
-    modelName: "model_a",
-    entryX: 2, entryY: 5, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxx\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxx000000000\r" +
-      "xxx000000000\r" +
-      "xx0000000000\r" +
-      "xxx000000000\r" +
-      "xxx000000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r",
-  },
-  model_b: {
-    modelName: "model_b",
-    entryX: 0, entryY: 5, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxx\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "x00000000000\r" +
-      "x00000000000\r" +
-      "x00000000000\r" +
-      "x00000000000\r" +
-      "x00000000000\r" +
-      "x00000000000\r" +
-      "xxxxxxxxxxxx\r",
-  },
-  model_c: {
-    modelName: "model_c",
-    entryX: 4, entryY: 7, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxxx\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxxxxxxxxxxx\r",
-  },
-  model_d: {
-    modelName: "model_d",
-    entryX: 4, entryY: 7, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxxx\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxxx00000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "xxxx000000000\r" +
-      "x000000000000\r" +
-      "x000000000000\r" +
-      "x000000000000\r" +
-      "x000000000000\r" +
-      "x000000000000\r" +
-      "x000000000000\r" +
-      "xxxxxxxxxxxxx\r",
-  },
-  model_e: {
-    modelName: "model_e",
-    entryX: 1, entryY: 5, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxx\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xxxxx0000000\r" +
-      "xx0000000000\r" +
-      "xx0000000000\r" +
-      "xx0000000000\r" +
-      "xx0000000000\r" +
-      "xx0000000000\r" +
-      "xx0000000000\r" +
-      "xxxxxxxxxxxx\r",
-  },
-  model_f: {
-    modelName: "model_f",
-    entryX: 1, entryY: 5, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxxxxxxx\r" +
-      "xxxxxxx0000000000\r" +
-      "xxxxxxx0000000000\r" +
-      "xxxxxxx0000000000\r" +
-      "xxxxxxx0000000000\r" +
-      "xx000000000000000\r" +
-      "xx000000000000000\r" +
-      "xx000000000000000\r" +
-      "xx000000000000000\r" +
-      "xx000000000000000\r" +
-      "xx000000000000000\r" +
-      "xxxxxxxxxxxxxxxxx\r",
-  },
-  model_i: {
-    modelName: "model_i",
-    entryX: 0, entryY: 10, entryDir: 2,
-    heightmap:
-      "xxxxxxxxxxxxxxxxx\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "x0000000000000000\r" +
-      "xxxxxxxxxxxxxxxxx\r",
-  },
-};
-
-const DEFAULT_MODEL_KEY = "model_a";
 const DEFAULT_ROOM_ID = 1;
-
-/** Parse URL hash: #room-name or #room-name:model_b */
-function parseRoomHash(hash: string): { roomName: string; modelKey: string } {
-  const clean = hash.replace("#", "").trim();
-  if (!clean) return { roomName: "p2p-lobby", modelKey: DEFAULT_MODEL_KEY };
-  const parts = clean.split(":");
-  const roomName = parts[0] || "p2p-lobby";
-  const modelKey = (parts[1] && ROOM_MODELS[parts[1]]) ? parts[1] : DEFAULT_MODEL_KEY;
-  return { roomName, modelKey };
-}
-
-function getModel(key: string): RoomModelDef {
-  return ROOM_MODELS[key] || ROOM_MODELS[DEFAULT_MODEL_KEY];
-}
 
 // Default figure strings for avatars
 const DEFAULT_FIGURES = [
@@ -291,6 +116,8 @@ export class P2PRoomState {
   private _isWalking: boolean;
   private _chatReady: boolean;
 
+  // Navigator: maps synthetic roomId → modelKey for navigator-driven room entry
+  private _roomIdToModel: Map<number, string>;
 
   // Stored observer refs for cleanup
   private _userPositionsObserver: ((event: Y.YMapEvent<any>) => void) | null;
@@ -331,6 +158,13 @@ export class P2PRoomState {
     this._walkTimer = null;
     this._isWalking = false;
     this._chatReady = false;
+
+    // Build navigator room list: assign a unique roomId to each model
+    this._roomIdToModel = new Map();
+    const allKeys = getAllModelKeys();
+    for (let i = 0; i < allKeys.length; i++) {
+      this._roomIdToModel.set(i + 100, allKeys[i]); // roomIds 100, 101, 102, ...
+    }
 
     this._userPositionsObserver = null;
     this._chatMessagesObserver = null;
@@ -386,10 +220,17 @@ export class P2PRoomState {
       case OutgoingHeader.UNIT_CHAT_SHOUT:
         this.handleLocalChat(args[0] as string, header === OutgoingHeader.UNIT_CHAT_SHOUT ? 1 : 0);
         break;
-      case OutgoingHeader.CLIENT_PONG:
       case OutgoingHeader.DESKTOP_VIEW:
+        // User clicked "Home" — reset room entry state so they can re-enter
+        this.resetForReentry();
+        break;
       case OutgoingHeader.NAVIGATOR_INIT:
+        this.handleNavigatorInit();
+        break;
       case OutgoingHeader.NAVIGATOR_SEARCH:
+        this.handleNavigatorSearch(args[0] as string, args[1] as string);
+        break;
+      case OutgoingHeader.CLIENT_PONG:
       case OutgoingHeader.UNIT_ACTION:
       case OutgoingHeader.UNIT_DANCE:
       case OutgoingHeader.UNIT_LOOK:
@@ -476,11 +317,127 @@ export class P2PRoomState {
     this._connection.injectIncomingMessage(IncomingHeader.NAVIGATOR_EVENT_CATEGORIES, 0);
   }
 
-  private sendNavigatorData(): void {
-    NitroLogger.log("[P2P] Sending navigator data to trigger room entry");
+  // ─── Navigator Handlers ──────────────────────────────────────
 
-    // NAVIGATOR_METADATA (3052) - empty contexts
-    this._connection.injectIncomingMessage(IncomingHeader.NAVIGATOR_METADATA, 0);
+  /**
+   * NAVIGATOR_METADATA (3052) — top-level context tabs shown in navigator.
+   * Format: INT contextCount, then for each: STRING code, INT savedSearchCount (+ searches)
+   */
+  private sendNavigatorMetadata(): void {
+    const w = new BinaryWriter();
+    w.writeShort(IncomingHeader.NAVIGATOR_METADATA);
+
+    // 3 top-level tabs: hotel_view, rooms, p2p_rooms
+    w.writeInt(3);
+
+    // Tab 1: "hotel_view"
+    w.writeString("hotel_view", true);
+    w.writeInt(0); // no saved searches
+
+    // Tab 2: "official_view" (public rooms)
+    w.writeString("official_view", true);
+    w.writeInt(0);
+
+    // Tab 3: "myworld_view" (my rooms / P2P)
+    w.writeString("myworld_view", true);
+    w.writeInt(0);
+
+    this.injectRawPacket(w);
+  }
+
+  /**
+   * Called when the client sends NavigatorInitComposer (OutgoingHeader.NAVIGATOR_INIT = 2110)
+   * This triggers the navigator to request metadata.
+   */
+  private handleNavigatorInit(): void {
+    NitroLogger.log("[P2P] Navigator init");
+    this.sendNavigatorMetadata();
+  }
+
+  /**
+   * Called when the client sends NavigatorSearchComposer (OutgoingHeader.NAVIGATOR_SEARCH = 249)
+   * args: [code, data] where code is the tab code and data is the search query.
+   *
+   * Responds with NAVIGATOR_SEARCH (2690) containing room listings.
+   */
+  private handleNavigatorSearch(code: string, data: string): void {
+    NitroLogger.log("[P2P] Navigator search, code:", code, "data:", data);
+
+    // Curate a subset of "nice" models for the navigator (skip enormous or weird ones)
+    const NICE_MODELS = [
+      "model_a", "model_b", "model_c", "model_d", "model_e", "model_f",
+      "model_g", "model_h", "model_i", "model_j", "model_k", "model_l",
+      "model_m", "model_n", "model_o", "model_p", "model_q", "model_r",
+      "model_s", "model_t", "model_u", "model_v", "model_w", "model_x",
+      "model_y", "model_z",
+      "model_0", "model_1", "model_2", "model_3", "model_4", "model_5",
+      "model_6", "model_7", "model_8", "model_9",
+      "rooftop", "rooftop_2", "pub_a", "pizza", "newbie_lobby", "old_skool",
+      "the_den", "park_a", "park_b",
+    ];
+
+    const w = new BinaryWriter();
+    w.writeShort(IncomingHeader.NAVIGATOR_SEARCH);
+
+    // NavigatorSearchResultSet:
+    w.writeString(code || "official_view", true);  // code
+    w.writeString(data || "", true);                // data (search query)
+    w.writeInt(1);                                  // resultListCount = 1
+
+    // NavigatorSearchResultList:
+    w.writeString(code || "official_view", true);   // list code
+    w.writeString("", true);                        // list data
+    w.writeInt(0);                                  // action
+    w.writeByte(0);                                 // closed = false
+    w.writeInt(0);                                  // mode = 0 (list view)
+
+    // Filter models by search query if provided
+    const query = (data || "").toLowerCase().trim();
+    const filteredModels = query
+      ? NICE_MODELS.filter(k => k.toLowerCase().includes(query))
+      : NICE_MODELS;
+
+    w.writeInt(filteredModels.length);              // roomCount
+
+    for (const modelKey of filteredModels) {
+      const model = getModel(modelKey);
+      // Find the roomId for this model from our map
+      let roomId = 100; // fallback
+      for (const [id, key] of this._roomIdToModel.entries()) {
+        if (key === modelKey) { roomId = id; break; }
+      }
+
+      // Friendly name from model key
+      const friendlyName = modelKey.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+      // RoomDataParser fields:
+      w.writeInt(roomId);                           // roomId
+      w.writeString("P2P: " + friendlyName, true);  // roomName
+      w.writeInt(this._localUserId);                // ownerId
+      w.writeString(this._localName, true);         // ownerName
+      w.writeInt(0);                                // doorMode = OPEN
+      w.writeInt(0);                                // userCount
+      w.writeInt(25);                               // maxUserCount
+      w.writeString("Peer-to-peer room with " + modelKey + " layout", true); // description
+      w.writeInt(0);                                // tradeMode
+      w.writeInt(0);                                // score
+      w.writeInt(0);                                // ranking
+      w.writeInt(0);                                // categoryId
+      w.writeInt(0);                                // tags count
+      w.writeInt(8);                                // bitMask (SHOWOWNER = 8)
+    }
+
+    this.injectRawPacket(w);
+  }
+
+  private sendNavigatorData(): void {
+    const hash = window.location.hash.replace("#", "").trim();
+    const hasHash = hash.length > 0;
+
+    NitroLogger.log("[P2P] Sending navigator data, hash:", hash || "(none)");
+
+    // NAVIGATOR_METADATA (3052) — send top-level context tabs
+    this.sendNavigatorMetadata();
 
     // NAVIGATOR_SEARCHES (3984) - empty saved searches
     this._connection.injectIncomingMessage(IncomingHeader.NAVIGATOR_SEARCHES, 0);
@@ -488,11 +445,18 @@ export class P2PRoomState {
     // NAVIGATOR_SETTINGS (518) - window position
     this._connection.injectIncomingMessage(IncomingHeader.NAVIGATOR_SETTINGS, 100, 100, 400, 500, false, 0);
 
-    // USER_HOME_ROOM (2875) - THIS triggers room entry!
-    // homeRoomId, roomIdToEnter
-    // When roomIdToEnter > 0, the navigator calls CreateRoomSession(roomIdToEnter)
-    // which creates a RoomSession and sends RoomEnterComposer
-    this._connection.injectIncomingMessage(IncomingHeader.USER_HOME_ROOM, this._roomId, this._roomId);
+    // USER_HOME_ROOM (2875)
+    // If URL has a hash (e.g. #my-room:model_f), auto-enter that room.
+    // Otherwise, send roomIdToEnter=0 so hotel view shows on startup.
+    if (hasHash) {
+      const parsed = parseRoomHash(hash);
+      this._roomName = parsed.roomName;
+      this._modelKey = parsed.modelKey;
+      this._connection.injectIncomingMessage(IncomingHeader.USER_HOME_ROOM, this._roomId, this._roomId);
+    } else {
+      // roomIdToEnter = 0 → navigator shows hotel view, user picks a room
+      this._connection.injectIncomingMessage(IncomingHeader.USER_HOME_ROOM, 0, 0);
+    }
   }
 
   // ─── Room Entry ─────────────────────────────────────────────
@@ -502,17 +466,37 @@ export class P2PRoomState {
    * This happens after CreateRoomSession() is called by the navigator.
    */
   private handleRoomEnter(roomId: number): void {
-    if (this._roomEntryInProgress) {
-      NitroLogger.log("[P2P] Room enter already in progress, skipping duplicate");
+    // Allow re-entry if switching to a different room
+    if (this._roomEntryInProgress && roomId === this._roomId) {
+      NitroLogger.log("[P2P] Room enter already in progress for same room, skipping duplicate");
       return;
     }
+
+    // If we're already in a room (or mid-entry for a different room), clean up first
+    if (this._isInRoom || this._roomEntryInProgress) {
+      this.cleanupP2PState();
+      this._roomEntryInProgress = false;
+      this._roomModelSent = false;
+    }
+
     this._roomEntryInProgress = true;
     this._roomModelSent = false;
     this._roomId = roomId || DEFAULT_ROOM_ID;
-    const hash = window.location.hash.replace("#", "");
-    const parsed = parseRoomHash(hash);
-    this._roomName = parsed.roomName;
-    this._modelKey = parsed.modelKey;
+
+    // Check if this roomId came from the navigator (has a model mapping)
+    const navigatorModel = this._roomIdToModel.get(roomId);
+    if (navigatorModel) {
+      this._modelKey = navigatorModel;
+      this._roomName = navigatorModel.replace(/_/g, "-");
+      // Update URL hash so refreshing returns to the same room
+      window.location.hash = this._roomName + ":" + this._modelKey;
+    } else {
+      // Fall back to URL hash
+      const hash = window.location.hash.replace("#", "");
+      const parsed = parseRoomHash(hash);
+      this._roomName = parsed.roomName;
+      this._modelKey = parsed.modelKey;
+    }
 
     NitroLogger.log("[P2P] Room enter request for room:", this._roomId, "name:", this._roomName, "model:", this._modelKey);
 
@@ -542,6 +526,13 @@ export class P2PRoomState {
    */
   private handleGetGuestRoom(roomId: number, forwardRoom: boolean = false): void {
     NitroLogger.log("[P2P] GetGuestRoom for room:", roomId, "forward:", forwardRoom);
+    // If the roomId is from navigator, temporarily set model info for the response
+    const navModel = this._roomIdToModel.get(roomId);
+    if (navModel && forwardRoom) {
+      this._modelKey = navModel;
+      this._roomName = navModel.replace(/_/g, "-");
+      this._roomId = roomId;
+    }
     this.sendGuestRoomResult(roomId || this._roomId, false, forwardRoom);
   }
 
@@ -579,7 +570,11 @@ export class P2PRoomState {
 
     // FloorHeightMap (ROOM_MODEL = 1301) - the main room model
     // scale=true means parser._scale=32 which avoids restrictsScaling=true and restrictedScale=0.5
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL, true, -1, model.heightmap);
+    // IMPORTANT: Strip trailing \r to prevent FloorHeightMapMessageParser from counting
+    // an extra phantom row (it doesn't filter empty rows like sendRoomHeightMap does)
+    const heightmapStr = model.heightmap.replace(/\r$/, "");
+
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_MODEL, true, -1, heightmapStr);
 
     // RoomHeightMap (ROOM_HEIGHT_MAP = 2753) - binary tile heights for stacking
     this.sendRoomHeightMap();
@@ -874,6 +869,7 @@ export class P2PRoomState {
     });
 
     this._isInRoom = true;
+    this._roomEntryInProgress = false; // Room loaded, allow future room switches
 
     // Register page unload cleanup
     window.addEventListener("beforeunload", this._handleBeforeUnload);
@@ -896,6 +892,7 @@ export class P2PRoomState {
    */
   private announceLocalUser(): void {
     if (!this._userPositions) return;
+    if (this._isWalking) return;
     const am = getModel(this._modelKey);
     this._userPositions.set(this._localPeerId, {
       peerId: this._localPeerId,
@@ -928,15 +925,17 @@ export class P2PRoomState {
     const heightmap: string = this._roomMeta?.get("heightmap") || getModel(this._modelKey).heightmap;
     const rows = heightmap.split("\r").filter((r: string) => r.length > 0);
     const maxY = rows.length;
-    const maxX = rows[0]?.length || 0;
+    const maxX = rows.length > 0 ? Math.max(...rows.map(r => r.length)) : 0;
 
     const isWalkable = (tx: number, ty: number): boolean => {
       if (tx < 0 || ty < 0 || ty >= maxY || tx >= maxX) return false;
       const ch = rows[ty]?.[tx];
-      return ch !== undefined && ch !== 'x';
+      return ch !== undefined && ch !== 'x' && ch !== 'X';
     };
 
-    if (!isWalkable(endX, endY)) return [];
+    if (!isWalkable(endX, endY)) {
+      return [];
+    }
 
     const dirs = [
       {dx: 0, dy: -1}, {dx: 1, dy: -1}, {dx: 1, dy: 0}, {dx: 1, dy: 1},
@@ -982,17 +981,18 @@ export class P2PRoomState {
     return 2;
   }
 
-  /** Standard Habbo walk step interval in ms (matches original client timing) */
-  private static readonly WALK_STEP_MS = 400;
+  /** Walk step interval — must match MovingObjectLogic.DEFAULT_UPDATE_INTERVAL (500ms) */
+  private static readonly WALK_STEP_MS = 500;
 
   private handleLocalWalk(x: number, y: number): void {
     if (!this._isInRoom) return;
     const currentData = this._userPositions?.get(this._localPeerId);
     if (!currentData) return;
 
-    // Cancel any existing walk
+    // Cancel any existing walk (timer may be setInterval or setTimeout)
     if (this._walkTimer) {
       clearInterval(this._walkTimer);
+      clearTimeout(this._walkTimer);
       this._walkTimer = null;
     }
 
@@ -1018,25 +1018,22 @@ export class P2PRoomState {
       this.injectRawPacket(iw);
     };
 
+    const finishWalk = () => {
+      this._isWalking = false;
+      if (this._walkTimer) { clearInterval(this._walkTimer); this._walkTimer = null; }
+      const data = this._userPositions?.get(this._localPeerId);
+      if (data) {
+        sendStandStatus(data);
+        this._userPositions.set(this._localPeerId, { ...data, didMove: false });
+      }
+    };
+
     const processStep = () => {
       // Guard: abort if room was destroyed mid-walk
       if (!this._isInRoom || !this._connection) {
         if (this._walkTimer) { clearInterval(this._walkTimer); this._walkTimer = null; }
         this._isWalking = false;
         this._walkQueue = [];
-        return;
-      }
-      if (this._walkQueue.length === 0) {
-        this._isWalking = false;
-        if (this._walkTimer) { clearInterval(this._walkTimer); this._walkTimer = null; }
-        const data = this._userPositions?.get(this._localPeerId);
-        if (data) {
-          sendStandStatus(data);
-          // Update shared state to reflect standing
-          this._userPositions.set(this._localPeerId, {
-            ...data, didMove: false,
-          });
-        }
         return;
       }
 
@@ -1047,7 +1044,6 @@ export class P2PRoomState {
       const oldX = data.x;
       const oldY = data.y;
       const dir = this.calcDirection(oldX, oldY, step.x, step.y);
-
       // Send movement status with /mv for walk animation
       const w = new BinaryWriter();
       w.writeShort(IncomingHeader.UNIT_STATUS);
@@ -1066,10 +1062,19 @@ export class P2PRoomState {
         targetX: x, targetY: y, targetZ: 0,
         didMove: this._walkQueue.length > 0,
       });
+
+      // If that was the last step, schedule the stand packet after the slide finishes
+      if (this._walkQueue.length === 0) {
+        if (this._walkTimer) { clearInterval(this._walkTimer); this._walkTimer = null; }
+        this._walkTimer = setTimeout(() => {
+          this._walkTimer = null;
+          finishWalk();
+        }, P2PRoomState.WALK_STEP_MS) as any;
+      }
     };
 
     processStep();
-    if (this._walkQueue.length > 0) {
+    if (this._walkQueue.length > 0 && !this._walkTimer) {
       this._walkTimer = setInterval(processStep, P2PRoomState.WALK_STEP_MS);
     }
   }
@@ -1233,32 +1238,17 @@ export class P2PRoomState {
 
   // ─── Lifecycle ──────────────────────────────────────────────
 
-  public destroy(): void {
-    this._isInRoom = false;
-
-    // Cancel any active walk
-    if (this._walkTimer) {
-      clearInterval(this._walkTimer);
-      this._walkTimer = null;
-    }
-    this._isWalking = false;
-    this._walkQueue = [];
-
-    // Clear deferred signaling timers
-    if (this._signalingConnectTimeout) {
-      clearTimeout(this._signalingConnectTimeout);
-      this._signalingConnectTimeout = null;
-    }
-    if (this._signalingCheckInterval) {
-      clearInterval(this._signalingCheckInterval);
-      this._signalingCheckInterval = null;
+  /**
+   * Clean up Yjs doc/provider/resilience for the current room.
+   * Called when switching rooms or leaving to desktop.
+   */
+  private cleanupP2PState(): void {
+    // Remove presence
+    if (this._userPositions) {
+      try { this._userPositions.delete(this._localPeerId); } catch (e) { /* */ }
     }
 
-    // Remove page unload listener
-    window.removeEventListener("beforeunload", this._handleBeforeUnload);
-    window.removeEventListener("pagehide", this._handleBeforeUnload);
-
-    // Unregister Yjs observers before destroying doc
+    // Unregister Yjs observers
     if (this._userPositions && this._userPositionsObserver) {
       try { this._userPositions.unobserve(this._userPositionsObserver); } catch (e) { /* */ }
       this._userPositionsObserver = null;
@@ -1268,25 +1258,82 @@ export class P2PRoomState {
       this._chatMessagesObserver = null;
     }
 
+    // Stop resilience
     if (this._resilience) {
       this._resilience.destroy();
       this._resilience = null;
     }
-    if (this._userPositions) {
-      try { this._userPositions.delete(this._localPeerId); } catch (e) { /* */ }
-    }
+
+    // Destroy provider and persistence
     if (this._provider) {
       this._provider.destroy();
       this._provider = null;
     }
     if (this._persistence) {
-      this._persistence.destroy();
+      try { this._persistence.destroy(); } catch (e) { /* */ }
       this._persistence = null;
     }
+
+    // Destroy Yjs doc
     if (this._doc) {
       this._doc.destroy();
       this._doc = null;
     }
+
+    this._userPositions = null;
+    this._roomMeta = null;
+    this._chatMessages = null;
+    this._chatReady = false;
+    this._knownPeers.clear();
+    this._isInRoom = false;
+
+    // Clear signaling timers
+    if (this._signalingConnectTimeout) {
+      clearTimeout(this._signalingConnectTimeout);
+      this._signalingConnectTimeout = null;
+    }
+    if (this._signalingCheckInterval) {
+      clearInterval(this._signalingCheckInterval);
+      this._signalingCheckInterval = null;
+    }
+
+    // Remove page unload listener (re-added on next room entry)
+    window.removeEventListener("beforeunload", this._handleBeforeUnload);
+    window.removeEventListener("pagehide", this._handleBeforeUnload);
+  }
+
+  /**
+   * Reset state so the user can re-enter the room without a full page reload.
+   * Called when the user goes to the desktop/home screen.
+   */
+  public resetForReentry(): void {
+    this._roomEntryInProgress = false;
+    this._roomModelSent = false;
+    this._isWalking = false;
+    if (this._walkTimer) {
+      clearInterval(this._walkTimer);
+      clearTimeout(this._walkTimer);
+      this._walkTimer = null;
+    }
+    this._walkQueue = [];
+
+    this.cleanupP2PState();
+
+    NitroLogger.log("[P2P] Reset for room re-entry — showing hotel view");
+    // VisitDesktop() already dispatches RoomSessionEvent.ENDED with openLandingView=true,
+    // which causes HotelView to show. Do NOT re-inject USER_HOME_ROOM here.
+  }
+
+  public destroy(): void {
+    this._isWalking = false;
+    if (this._walkTimer) {
+      clearInterval(this._walkTimer);
+      clearTimeout(this._walkTimer);
+      this._walkTimer = null;
+    }
+    this._walkQueue = [];
+
+    this.cleanupP2PState();
 
     // Clear debug refs to allow GC
     if (typeof window !== 'undefined') {

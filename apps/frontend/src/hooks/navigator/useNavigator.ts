@@ -28,6 +28,7 @@ import {
   RoomEntryInfoMessageEvent,
   RoomForwardEvent,
   RoomScoreEvent,
+  RoomSessionEvent,
   RoomSettingsUpdatedEvent,
   SecurityLevel,
   UserEventCatsEvent,
@@ -51,7 +52,7 @@ import {
   TryVisitRoom,
   VisitDesktop,
 } from "../../api";
-import {useMessageEvent} from "../events";
+import {useMessageEvent, useRoomSessionManagerEvent} from "../events";
 import {useNotification} from "../notification";
 
 const useNavigatorState = () => {
@@ -78,6 +79,11 @@ const useNavigatorState = () => {
     canRate: true,
   });
   const {simpleAlert = null} = useNotification();
+
+  // Reset settingsReceived when leaving a room so P2P re-entry can trigger CreateRoomSession
+  useRoomSessionManagerEvent<RoomSessionEvent>(RoomSessionEvent.ENDED, () => {
+    setNavigatorData(prevValue => ({...prevValue, settingsReceived: false}));
+  });
 
   useMessageEvent<RoomSettingsUpdatedEvent>(RoomSettingsUpdatedEvent, event => {
     const parser = event.getParser();
