@@ -20,6 +20,8 @@
 import * as Y from "yjs";
 // @ts-ignore
 import { WebrtcProvider } from "y-webrtc";
+// @ts-ignore
+import { IndexeddbPersistence } from "y-indexeddb";
 import { BinaryWriter, NitroLogger } from "../../../api";
 import { IncomingHeader } from "../messages/incoming/IncomingHeader";
 import { OutgoingHeader } from "../messages/outgoing/OutgoingHeader";
@@ -81,7 +83,8 @@ function deterministicUnitId(peerId: string): number {
   for (let i = 0; i < peerId.length; i++) {
     hash = ((hash << 5) - hash + peerId.charCodeAt(i)) | 0;
   }
-  return (Math.abs(hash) % 99999) + 1;
+  // Use full 32-bit positive range to minimize birthday-problem collisions
+  return (Math.abs(hash) % 2147483646) + 1;
 }
 
 const MAX_CHAT_MESSAGES = 200;
@@ -110,6 +113,7 @@ export class P2PRoomState {
   private _connection: P2PLoopbackConnection;
   private _doc: Y.Doc;
   private _provider: WebrtcProvider | null;
+  private _persistence: IndexeddbPersistence | null;
   private _userPositions: Y.Map<any>;
   private _roomMeta: Y.Map<any>;
   private _chatMessages: Y.Array<any>;
@@ -140,6 +144,7 @@ export class P2PRoomState {
     this._connection = connection;
     this._doc = null;
     this._provider = null;
+    this._persistence = null;
     this._userPositions = null;
     this._roomMeta = null;
     this._chatMessages = null;
@@ -564,6 +569,19 @@ export class P2PRoomState {
     this._roomMeta = this._doc.getMap("room_meta");
     this._chatMessages = this._doc.getArray("chat_messages");
 
+    // Local persistence — survives page reloads and all-peers-leave scenarios.
+    // State is loaded from IndexedDB before the WebRTC provider connects,
+    // so the Yjs sync protocol will delta-sync only what's changed.
+    try {
+      this._persistence = new IndexeddbPersistence("p2p-nitro-" + this._roomName, this._doc);
+      this._persistence.on("synced", () => {
+        NitroLogger.log("[P2P] Local state loaded from IndexedDB");
+      });
+    } catch (e) {
+      NitroLogger.warn("[P2P] IndexedDB persistence unavailable:", e);
+      this._persistence = null;
+    }
+
     // Create WebRTC provider - defer until signaling server is confirmed available
     // For now, run in solo mode to avoid signaling spam
     this._provider = null;
@@ -579,10 +597,10 @@ export class P2PRoomState {
       this._roomName,
       {
         heartbeatIntervalMs: 5000,
-        heartbeatTimeoutMs: 15000,
+        heartbeatTimeoutMs: 10000,
         maxReconnectAttempts: 10,
         reconnectBaseDelayMs: 1000,
-        gcIntervalMs: 10000,
+        gcIntervalMs: 5000,
       }
     );
 
@@ -591,7 +609,10 @@ export class P2PRoomState {
       this.onPeerLeft(deadPeerId);
     });
 
-    // When seeder changes, initialize room meta if needed and track seeder identity
+    // When seeder changes, initialize room meta if needed and track seeder identity.
+    // Deferred via queueMicrotask to let any in-flight Yjs sync settle before we
+    // write seeder identity — avoids the race where both peers think they're seeder
+    // before the provider has synced remote heartbeats.
     this._resilience.onSeederChange((newSeederId: string, isSelf: boolean) => {
       this._isSeeder = isSelf;
       if (isSelf && this._roomMeta) {
@@ -602,10 +623,20 @@ export class P2PRoomState {
           this._roomMeta.set("roomId", this._roomId);
           this._roomMeta.set("roomName", this._roomName);
         }
-        // Store seeder identity so all peers agree on room owner
-        this._roomMeta.set("seederId", this._localPeerId);
-        this._roomMeta.set("seederName", this._localName);
-        this._roomMeta.set("seederUserId", this._localUserId);
+        // Defer seeder identity write — re-verify we're still the lowest peerId
+        // after any pending Yjs operations complete
+        queueMicrotask(() => {
+          if (!this._doc || !this._isSeeder) return;
+          const hb = this._doc.getMap("peer_heartbeats");
+          const peers: string[] = [];
+          hb.forEach((_v: any, k: string) => peers.push(k));
+          peers.sort();
+          if (peers.length === 0 || peers[0] === this._localPeerId) {
+            this._roomMeta.set("seederId", this._localPeerId);
+            this._roomMeta.set("seederName", this._localName);
+            this._roomMeta.set("seederUserId", this._localUserId);
+          }
+        });
       }
       NitroLogger.log(`[P2P] Seeder changed to ${newSeederId}${isSelf ? " (this peer)" : ""}`);
     });
@@ -646,8 +677,9 @@ export class P2PRoomState {
 
     // Listen for chat messages (with replay protection)
     // Gate on _chatReady to skip the initial Yjs sync replay of existing messages.
-    // No wall-clock comparison — clocks can differ across peers in a distributed system.
-    setTimeout(() => { this._chatReady = true; }, 2000);
+    // In connected mode, _chatReady is set by the provider 'sync' event (see _initSignalingDeferred).
+    // This timeout is the solo-mode fallback (no provider will ever connect).
+    setTimeout(() => { if (!this._chatReady) { this._chatReady = true; } }, 3000);
 
     this._chatMessages.observe((event: Y.YArrayEvent<any>) => {
       if (!this._chatReady) return;
@@ -902,7 +934,12 @@ export class P2PRoomState {
 
     NitroLogger.log("[P2P] Peer joined:", peerId, data.name);
 
-    const unitId = data.unitId || deterministicUnitId(peerId);
+    let unitId = data.unitId || deterministicUnitId(peerId);
+    // Collision guard: if another peer already has this unitId, bump until free
+    const usedIds = new Set(this._knownPeers.values());
+    while (usedIds.has(unitId)) {
+      unitId = (unitId % 2147483646) + 1;
+    }
     this._knownPeers.set(peerId, unitId);
 
     const w = new BinaryWriter();
@@ -1041,6 +1078,10 @@ export class P2PRoomState {
       this._provider.destroy();
       this._provider = null;
     }
+    if (this._persistence) {
+      this._persistence.destroy();
+      this._persistence = null;
+    }
     if (this._doc) {
       this._doc.destroy();
       this._doc = null;
@@ -1086,7 +1127,17 @@ export class P2PRoomState {
       try {
         this._provider = new WebrtcProvider("p2p-nitro-" + this._roomName, this._doc, {
           signaling: [server],
-          maxConns: 20,
+          maxConns: 20 + Math.floor(Math.random() * 15), // randomize to prevent mesh clustering
+          peerOpts: {
+            config: {
+              iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                // Add TURN server here for NAT traversal in production:
+                // { urls: "turn:your-turn-server:3478", username: "user", credential: "pass" },
+              ],
+            },
+          },
         });
 
         // Give the provider a few seconds to connect, then check
@@ -1123,9 +1174,19 @@ export class P2PRoomState {
                 if (this._resilience) {
                   this._resilience.provider = this._provider;
                   this._resilience.monitorConnection();
+                  // Re-send heartbeat immediately so remote peers don't GC us
+                  // (initial heartbeat may be stale if signaling took >15s)
+                  this._resilience.refreshHeartbeat();
                 }
-                // Safe to enable chat now that initial sync can complete
-                this._chatReady = true;
+                // Enable chat after Yjs sync completes (not on a fixed timer)
+                if (this._provider) {
+                  this._provider.on('synced', (isSynced: { synced: boolean }) => {
+                    if (!this._chatReady) {
+                      this._chatReady = true;
+                      NitroLogger.log("[P2P] Initial sync complete, chat ready");
+                    }
+                  });
+                }
                 return;
               }
             }

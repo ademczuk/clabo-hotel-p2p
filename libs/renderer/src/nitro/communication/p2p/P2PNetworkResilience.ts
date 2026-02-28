@@ -233,6 +233,11 @@ export class P2PNetworkResilience {
    * trigger automatic reconnection with exponential backoff.
    * Call this after the provider is set.
    */
+  /** Re-send heartbeat immediately. Call after provider connects to avoid stale initial heartbeat. */
+  public refreshHeartbeat(): void {
+    if (!this._destroyed) this.sendHeartbeat();
+  }
+
   public monitorConnection(): void {
     if (this._connectionMonitor || this._destroyed) return;
 
