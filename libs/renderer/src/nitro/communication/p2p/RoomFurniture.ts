@@ -70,11 +70,11 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
   // model_a: 8x13 walkable area, entry at (3,5), cols 4-11, rows 1-13
   model_a: {
     floor: [
-      { spriteId: SOFA_SILO, x: 5, y: 1, z: 0, dir: 4 },
+      { spriteId: LAMP_ARMAS, x: 4, y: 1, z: 0, dir: 2 },
+      { spriteId: SOFA_SILO, x: 5, y: 3, z: 0, dir: 4 },
       { spriteId: TABLE_NORJA_MED, x: 6, y: 1, z: 0, dir: 0 },
       { spriteId: CHAIR_POLYFON, x: 8, y: 1, z: 0, dir: 6 },
       { spriteId: CHAIR_POLYFON, x: 8, y: 2, z: 0, dir: 6 },
-      { spriteId: LAMP_ARMAS, x: 4, y: 1, z: 0, dir: 2 },
       { spriteId: SHELVES_NORJA, x: 10, y: 1, z: 0, dir: 4 },
       { spriteId: SHELVES_NORJA, x: 10, y: 2, z: 0, dir: 4 },
       { spriteId: DOORMAT_LOVE, x: 4, y: 5, z: 0, dir: 0 },
@@ -147,7 +147,7 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
       { spriteId: TABLE_POLY_SM, x: 3, y: 3, z: 0, dir: 0 },
       { spriteId: CHAIR_POLYFON, x: 2, y: 3, z: 0, dir: 2 },
       { spriteId: CHAIR_POLYFON, x: 5, y: 3, z: 0, dir: 6 },
-      { spriteId: PIZZA, x: 4, y: 4, z: 0, dir: 0 },
+      { spriteId: PIZZA, x: 4, y: 4, z: 0.7, dir: 0 },
       // East wall (x=11)
       { spriteId: BAR_POLYFON, x: 11, y: 4, z: 0, dir: 6 },
       { spriteId: LAMP_ARMAS, x: 11, y: 7, z: 0, dir: 6 },
@@ -671,9 +671,9 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
   model_b2g: {
     floor: [
       { spriteId: TABLE_POLY_SM, x: 2, y: 1, z: 0, dir: 0 },
-      { spriteId: CHAIR_POLYFON, x: 1, y: 1, z: 0, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 1, y: 2, z: 0, dir: 2 },
       { spriteId: CHAIR_POLYFON, x: 4, y: 1, z: 0, dir: 6 },
-      { spriteId: LAMP_ARMAS, x: 1, y: 3, z: 0, dir: 2 },
+      { spriteId: LAMP_ARMAS, x: 1, y: 4, z: 0, dir: 2 },
       { spriteId: SOFA_SILO, x: 8, y: 1, z: 0, dir: 4 },
       { spriteId: TABLE_NORJA_MED, x: 8, y: 3, z: 0, dir: 0 },
       { spriteId: SHELVES_NORJA, x: 12, y: 8, z: 0, dir: 4 },
@@ -880,7 +880,7 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
       { spriteId: TABLE_POLY_SM, x: 8, y: 14, z: 0, dir: 0 },
       { spriteId: CHAIR_POLYFON, x: 7, y: 14, z: 0, dir: 2 },
       { spriteId: CHAIR_POLYFON, x: 10, y: 14, z: 0, dir: 6 },
-      { spriteId: PIZZA, x: 9, y: 15, z: 0, dir: 0 },
+      { spriteId: PIZZA, x: 9, y: 15, z: 0.7, dir: 0 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=4,0 l=0,24 r" },
@@ -946,7 +946,7 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
       // Upper h=2 zone — game table
       { spriteId: TABLE_POLY_SM, x: 4, y: 1, z: 2, dir: 0 },
       { spriteId: EDICE, x: 4, y: 1, z: 2.7, dir: 0 },
-      { spriteId: BOTTLE, x: 5, y: 2, z: 2, dir: 0 },
+      { spriteId: BOTTLE, x: 5, y: 2, z: 2.7, dir: 0 },
       { spriteId: CHAIR_POLYFON, x: 3, y: 1, z: 2, dir: 2 },
       { spriteId: CHAIR_POLYFON, x: 6, y: 1, z: 2, dir: 6 },
       { spriteId: CHAIR_POLYFON, x: 3, y: 2, z: 2, dir: 2 },
