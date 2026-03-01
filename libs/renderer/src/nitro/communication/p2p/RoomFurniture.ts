@@ -413,9 +413,9 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
       { spriteId: TABLE_NORJA_MED, x: 10, y: 19, z: 0, dir: 0 },
       { spriteId: CHAIR_POLYFON, x: 9, y: 19, z: 0, dir: 2 },
       { spriteId: CHAIR_POLYFON, x: 12, y: 19, z: 0, dir: 6 },
-      // Around the internal void — north face (y=7)
-      { spriteId: TABLE_POLY_SM, x: 8, y: 6, z: 0, dir: 0 },
-      // Around the internal void — south face (y=14)
+      // Around the internal void — north face (y=6, table must not extend into y=7 void)
+      { spriteId: TABLE_POLY_SM, x: 4, y: 5, z: 0, dir: 0 },
+      // Around the internal void — south face (y=15)
       { spriteId: EDICE, x: 10, y: 15, z: 0, dir: 0 },
     ],
     wall: [
@@ -511,56 +511,57 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
     ],
   },
 
-  // model_r: larger room
+  // model_r: multi-level staircase. Upper NE h=3 (x=11-24,y=1-12), SW h=4 (x=1-5,y=13-16),
+  //          mid h=3 (x=7-10,y=7-16), lower h=0 (x=17-22,y=15-24)
   model_r: {
     floor: [
-      // Lounge area
-      { spriteId: SOFA_SILO, x: 6, y: 1, z: 0, dir: 4 },
-      { spriteId: SOFA_SILO, x: 6, y: 4, z: 0, dir: 4 },
-      { spriteId: TABLE_NORJA_MED, x: 6, y: 2, z: 0, dir: 0 },
-      { spriteId: FIREPLACE_ARMAS, x: 9, y: 1, z: 0, dir: 2 },
-      // Cafe area
-      { spriteId: TABLE_POLY_SM, x: 2, y: 6, z: 0, dir: 0 },
-      { spriteId: CHAIR_POLYFON, x: 1, y: 6, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 1, y: 7, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 4, y: 6, z: 0, dir: 6 },
-      { spriteId: BAR_POLYFON, x: 9, y: 6, z: 0, dir: 4 },
-      { spriteId: LAMP_ARMAS, x: 5, y: 1, z: 0, dir: 2 },
-      { spriteId: LAMP_ARMAS, x: 5, y: 4, z: 0, dir: 2 },
+      // Upper NE section h=3 — north wall (y=1, x=11-24)
+      { spriteId: SOFA_SILO, x: 12, y: 1, z: 3, dir: 4 },
+      { spriteId: TABLE_NORJA_MED, x: 14, y: 1, z: 3, dir: 0 },
+      { spriteId: LAMP_ARMAS, x: 11, y: 1, z: 3, dir: 2 },
+      { spriteId: SHELVES_NORJA, x: 22, y: 1, z: 3, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 23, y: 1, z: 3, dir: 4 },
+      // Upper NE — east wall
+      { spriteId: BAR_POLYFON, x: 24, y: 5, z: 3, dir: 6 },
+      // Mid section h=3 — center
+      { spriteId: TABLE_POLY_SM, x: 8, y: 9, z: 3, dir: 0 },
+      { spriteId: CHAIR_POLYFON, x: 7, y: 9, z: 3, dir: 2 },
+      // Lower section h=0 — south wall (x=17-22, y=21-24)
+      { spriteId: CHAIR_SILO, x: 18, y: 22, z: 0, dir: 4 },
+      { spriteId: LAMP_BASIC, x: 17, y: 21, z: 0, dir: 2 },
     ],
     wall: [
-      { spriteId: WALL_LAMP, location: ":w=2,0 l=0,24 r" },
-      { spriteId: WALL_LAMP, location: ":w=7,0 l=0,24 r" },
+      { spriteId: WALL_LAMP, location: ":w=5,0 l=0,24 r" },
     ],
   },
 
-  // model_s: medium room, entry near bottom
+  // model_s: tiny room 6x8, walkable cols 1-5, rows 1-7, entry (0,3)
   model_s: {
     floor: [
-      { spriteId: BED_POLYFON, x: 2, y: 1, z: 0, dir: 2 },
+      { spriteId: SHELVES_NORJA, x: 5, y: 1, z: 0, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 5, y: 2, z: 0, dir: 4 },
       { spriteId: LAMP_BASIC, x: 1, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_POLYFON, x: 6, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_NORJA, x: 8, y: 1, z: 0, dir: 4 },
-      { spriteId: CHAIR_SILO, x: 8, y: 4, z: 0, dir: 6 },
+      { spriteId: CHAIR_SILO, x: 4, y: 5, z: 0, dir: 4 },
       { spriteId: LAMP_ARMAS, x: 1, y: 5, z: 0, dir: 2 },
     ],
     wall: [
-      { spriteId: WALL_MIRROR, location: ":w=4,0 l=0,20 r" },
+      { spriteId: WALL_MIRROR, location: ":w=2,0 l=0,20 r" },
       { spriteId: WALL_LAMP, location: ":w=1,0 l=0,24 r" },
     ],
   },
 
-  // model_t: medium room, entry near bottom
+  // model_t: concentric arena. Outer ring h=2 (rows 1-4,23-26, cols 1-4,24-27), inner ring h=1, core h=0
   model_t: {
     floor: [
-      { spriteId: SOFA_SILO, x: 3, y: 2, z: 0, dir: 4 },
-      { spriteId: TABLE_NORJA_MED, x: 3, y: 4, z: 0, dir: 0 },
-      { spriteId: SOFA_SILO, x: 3, y: 6, z: 0, dir: 4 },
-      { spriteId: LAMP_ARMAS, x: 3, y: 8, z: 0, dir: 2 },
-      { spriteId: FIREPLACE_ARMAS, x: 7, y: 2, z: 0, dir: 4 },
-      { spriteId: SHELVES_NORJA, x: 10, y: 2, z: 0, dir: 6 },
-      { spriteId: SHELVES_NORJA, x: 10, y: 3, z: 0, dir: 6 },
-      { spriteId: LAMP_BASIC, x: 10, y: 6, z: 0, dir: 6 },
+      // Outer ring h=2 — north wall
+      { spriteId: SOFA_SILO, x: 3, y: 2, z: 2, dir: 4 },
+      { spriteId: TABLE_NORJA_MED, x: 3, y: 4, z: 2, dir: 0 },
+      { spriteId: SOFA_SILO, x: 3, y: 6, z: 2, dir: 4 },
+      { spriteId: LAMP_ARMAS, x: 3, y: 8, z: 2, dir: 2 },
+      { spriteId: FIREPLACE_ARMAS, x: 7, y: 2, z: 2, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 10, y: 2, z: 2, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 11, y: 2, z: 2, dir: 4 },
+      { spriteId: LAMP_BASIC, x: 25, y: 2, z: 2, dir: 6 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=3,0 l=0,24 r" },
@@ -568,19 +569,21 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
     ],
   },
 
-  // model_v: medium room
+  // model_v: split-level. Upper rows 1-6: cols 1-5 h=2, cols 6-18 h=1. Lower rows 8+ h=0.
   model_v: {
     floor: [
-      { spriteId: TABLE_POLY_SM, x: 5, y: 2, z: 0, dir: 0 },
-      { spriteId: EDICE, x: 5, y: 2, z: 0.7, dir: 0 },
-      { spriteId: CHAIR_POLYFON, x: 4, y: 2, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 7, y: 2, z: 0, dir: 6 },
-      { spriteId: CHAIR_POLYFON, x: 4, y: 3, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 7, y: 3, z: 0, dir: 6 },
-      { spriteId: BOTTLE, x: 6, y: 4, z: 0, dir: 0 },
-      { spriteId: LAMP_ARMAS, x: 3, y: 2, z: 0, dir: 2 },
-      { spriteId: SHELVES_NORJA, x: 10, y: 2, z: 0, dir: 6 },
-      { spriteId: LAMP_BASIC, x: 10, y: 5, z: 0, dir: 6 },
+      // Upper h=2 zone (cols 1-5, rows 1-6)
+      { spriteId: LAMP_ARMAS, x: 1, y: 1, z: 2, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 2, y: 2, z: 2, dir: 4 },
+      // Upper h=1 zone (cols 6-18, rows 1-6)
+      { spriteId: TABLE_POLY_SM, x: 8, y: 2, z: 1, dir: 0 },
+      { spriteId: EDICE, x: 8, y: 2, z: 1.7, dir: 0 },
+      { spriteId: CHAIR_POLYFON, x: 7, y: 2, z: 1, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 10, y: 2, z: 1, dir: 6 },
+      { spriteId: CHAIR_POLYFON, x: 7, y: 3, z: 1, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 10, y: 3, z: 1, dir: 6 },
+      { spriteId: SHELVES_NORJA, x: 18, y: 2, z: 1, dir: 6 },
+      { spriteId: LAMP_BASIC, x: 18, y: 5, z: 1, dir: 6 },
     ],
     wall: [
       { spriteId: WALL_TORCH, location: ":w=5,0 l=0,20 r" },
@@ -760,17 +763,18 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
     ],
   },
 
-  // model_w: complex multi-level, entry (0,3)
+  // model_w: three-level. Left col h=2 (cols 1-5), center h=1 (cols 7-16), right pockets h=0
   model_w: {
     floor: [
-      { spriteId: SOFA_SILO, x: 8, y: 3, z: 0, dir: 4 },
-      { spriteId: TABLE_NORJA_MED, x: 8, y: 5, z: 0, dir: 0 },
-      { spriteId: LAMP_ARMAS, x: 7, y: 3, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 10, y: 5, z: 0, dir: 6 },
-      { spriteId: SHELVES_NORJA, x: 14, y: 3, z: 0, dir: 6 },
-      { spriteId: SHELVES_NORJA, x: 14, y: 4, z: 0, dir: 6 },
-      { spriteId: FIREPLACE_ARMAS, x: 11, y: 3, z: 0, dir: 4 },
-      { spriteId: LAMP_BASIC, x: 14, y: 7, z: 0, dir: 6 },
+      // Center h=1 zone (cols 7-16, rows 3-6 open corridor)
+      { spriteId: SOFA_SILO, x: 8, y: 3, z: 1, dir: 4 },
+      { spriteId: TABLE_NORJA_MED, x: 8, y: 5, z: 1, dir: 0 },
+      { spriteId: LAMP_ARMAS, x: 7, y: 3, z: 1, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 10, y: 5, z: 1, dir: 6 },
+      { spriteId: SHELVES_NORJA, x: 14, y: 3, z: 1, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 15, y: 3, z: 1, dir: 4 },
+      { spriteId: FIREPLACE_ARMAS, x: 11, y: 3, z: 1, dir: 4 },
+      { spriteId: LAMP_BASIC, x: 16, y: 7, z: 1, dir: 6 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=5,0 l=0,24 r" },
@@ -853,8 +857,8 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
       { spriteId: TABLE_NORJA_MED, x: 2, y: 3, z: 0, dir: 0 },
       { spriteId: LAMP_ARMAS, x: 1, y: 1, z: 0, dir: 2 },
       { spriteId: CHAIR_POLYFON, x: 4, y: 3, z: 0, dir: 6 },
+      { spriteId: SHELVES_NORJA, x: 7, y: 1, z: 0, dir: 4 },
       { spriteId: SHELVES_NORJA, x: 8, y: 1, z: 0, dir: 4 },
-      { spriteId: SHELVES_NORJA, x: 9, y: 1, z: 0, dir: 4 },
       { spriteId: FIREPLACE_ARMAS, x: 12, y: 1, z: 0, dir: 4 },
       { spriteId: LAMP_BASIC, x: 1, y: 6, z: 0, dir: 2 },
     ],
@@ -866,46 +870,53 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
 
   // ─── Numbered models ──────────────────────────────────────────
 
+  // model_room_15: gallery style. Left corridor h=1 (cols 1-5, rows 1-34), main floor h=0 (cols 6-22, rows 13-28)
   model_room_15: {
     floor: [
-      { spriteId: TABLE_POLY_SM, x: 4, y: 2, z: 0, dir: 0 },
-      { spriteId: CHAIR_POLYFON, x: 3, y: 2, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 6, y: 2, z: 0, dir: 6 },
-      { spriteId: BAR_POLYFON, x: 10, y: 2, z: 0, dir: 6 },
-      { spriteId: PIZZA, x: 5, y: 3, z: 0, dir: 0 },
-      { spriteId: LAMP_ARMAS, x: 3, y: 5, z: 0, dir: 2 },
+      // Left corridor h=1
+      { spriteId: LAMP_ARMAS, x: 1, y: 1, z: 1, dir: 2 },
+      { spriteId: SHELVES_NORJA, x: 5, y: 1, z: 1, dir: 4 },
+      // Main floor h=0 (cols 6-22, rows 13-28)
+      { spriteId: TABLE_POLY_SM, x: 8, y: 14, z: 0, dir: 0 },
+      { spriteId: CHAIR_POLYFON, x: 7, y: 14, z: 0, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 10, y: 14, z: 0, dir: 6 },
+      { spriteId: PIZZA, x: 9, y: 15, z: 0, dir: 0 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=4,0 l=0,24 r" },
     ],
   },
 
+  // model_1: grand staircase. Upper h=14 (cols 1-16, rows 1-5,10-31), entry at (0,10)
   model_1: {
     floor: [
-      { spriteId: TABLE_POLY_SM, x: 2, y: 1, z: 0, dir: 0 },
-      { spriteId: CHAIR_POLYFON, x: 1, y: 1, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 4, y: 1, z: 0, dir: 6 },
-      { spriteId: SOFA_SILO, x: 8, y: 1, z: 0, dir: 4 },
-      { spriteId: TABLE_NORJA_MED, x: 8, y: 3, z: 0, dir: 0 },
-      { spriteId: LAMP_ARMAS, x: 7, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_NORJA, x: 14, y: 1, z: 0, dir: 4 },
-      { spriteId: BAR_POLYFON, x: 14, y: 3, z: 0, dir: 4 },
+      // Upper h=14 zone — north wall (y=1, cols 1-16)
+      { spriteId: TABLE_POLY_SM, x: 2, y: 1, z: 14, dir: 0 },
+      { spriteId: CHAIR_POLYFON, x: 1, y: 1, z: 14, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 4, y: 1, z: 14, dir: 6 },
+      { spriteId: SOFA_SILO, x: 8, y: 1, z: 14, dir: 4 },
+      { spriteId: TABLE_NORJA_MED, x: 8, y: 3, z: 14, dir: 0 },
+      { spriteId: LAMP_ARMAS, x: 7, y: 1, z: 14, dir: 2 },
+      { spriteId: SHELVES_NORJA, x: 14, y: 1, z: 14, dir: 4 },
+      { spriteId: BAR_POLYFON, x: 14, y: 3, z: 14, dir: 4 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=4,0 l=0,24 r" },
     ],
   },
 
+  // model_2: staircase tower. Top h=19 (cols 1-13, rows 1-8), entry at (0,15) h=14
   model_2: {
     floor: [
-      { spriteId: SHELVES_POLYFON, x: 3, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_POLYFON, x: 5, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_NORJA, x: 7, y: 1, z: 0, dir: 4 },
-      { spriteId: SHELVES_NORJA, x: 8, y: 1, z: 0, dir: 4 },
-      { spriteId: CHAIR_SILO, x: 4, y: 4, z: 0, dir: 4 },
-      { spriteId: TABLE_NORJA_MED, x: 4, y: 5, z: 0, dir: 0 },
-      { spriteId: LAMP_BASIC, x: 5, y: 5, z: 0.7, dir: 0 },
-      { spriteId: LAMP_ARMAS, x: 3, y: 3, z: 0, dir: 2 },
+      // Top h=19 zone (cols 1-13, rows 1-8)
+      { spriteId: SHELVES_POLYFON, x: 3, y: 1, z: 19, dir: 2 },
+      { spriteId: SHELVES_POLYFON, x: 5, y: 1, z: 19, dir: 2 },
+      { spriteId: SHELVES_NORJA, x: 7, y: 1, z: 19, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 8, y: 1, z: 19, dir: 4 },
+      { spriteId: CHAIR_SILO, x: 4, y: 4, z: 19, dir: 4 },
+      { spriteId: TABLE_NORJA_MED, x: 4, y: 5, z: 19, dir: 0 },
+      { spriteId: LAMP_BASIC, x: 5, y: 5, z: 19.7, dir: 0 },
+      { spriteId: LAMP_ARMAS, x: 3, y: 3, z: 19, dir: 2 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=3,0 l=0,24 r" },
@@ -929,45 +940,51 @@ const MODEL_LAYOUTS: Record<string, RoomFurnitureLayout> = {
       { spriteId: WALL_TORCH, location: ":w=7,0 l=0,20 r" },
     ],
   },
+  // model_6: upper h=2 zone (cols 1-9, rows 1-9), lower h=0 (entry at row 15)
   model_6: {
     floor: [
-      { spriteId: TABLE_POLY_SM, x: 4, y: 1, z: 0, dir: 0 },
-      { spriteId: EDICE, x: 4, y: 1, z: 0.7, dir: 0 },
-      { spriteId: BOTTLE, x: 5, y: 2, z: 0, dir: 0 },
-      { spriteId: CHAIR_POLYFON, x: 3, y: 1, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 6, y: 1, z: 0, dir: 6 },
-      { spriteId: CHAIR_POLYFON, x: 3, y: 2, z: 0, dir: 2 },
-      { spriteId: CHAIR_POLYFON, x: 6, y: 2, z: 0, dir: 6 },
-      { spriteId: LAMP_ARMAS, x: 2, y: 1, z: 0, dir: 2 },
+      // Upper h=2 zone — game table
+      { spriteId: TABLE_POLY_SM, x: 4, y: 1, z: 2, dir: 0 },
+      { spriteId: EDICE, x: 4, y: 1, z: 2.7, dir: 0 },
+      { spriteId: BOTTLE, x: 5, y: 2, z: 2, dir: 0 },
+      { spriteId: CHAIR_POLYFON, x: 3, y: 1, z: 2, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 6, y: 1, z: 2, dir: 6 },
+      { spriteId: CHAIR_POLYFON, x: 3, y: 2, z: 2, dir: 2 },
+      { spriteId: CHAIR_POLYFON, x: 6, y: 2, z: 2, dir: 6 },
+      { spriteId: LAMP_ARMAS, x: 2, y: 1, z: 2, dir: 2 },
     ],
     wall: [
       { spriteId: WALL_TORCH, location: ":w=4,0 l=0,20 r" },
     ],
   },
+  // model_7: upper h=2 (cols 1-6, rows 1-12), lower h=0 (cols 1-6, rows 15-22), entry (0,17)
   model_7: {
     floor: [
-      { spriteId: BED_POLYFON, x: 3, y: 1, z: 0, dir: 2 },
-      { spriteId: LAMP_BASIC, x: 2, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_POLYFON, x: 6, y: 1, z: 0, dir: 2 },
-      { spriteId: SHELVES_NORJA, x: 8, y: 1, z: 0, dir: 4 },
-      { spriteId: CHAIR_SILO, x: 8, y: 3, z: 0, dir: 6 },
-      { spriteId: DOORMAT_PLAIN, x: 2, y: 5, z: 0, dir: 0 },
+      // Upper h=2 zone — bedroom
+      { spriteId: BED_POLYFON, x: 3, y: 1, z: 2, dir: 2 },
+      { spriteId: LAMP_BASIC, x: 2, y: 1, z: 2, dir: 2 },
+      { spriteId: SHELVES_NORJA, x: 6, y: 1, z: 2, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 6, y: 2, z: 2, dir: 4 },
+      { spriteId: CHAIR_SILO, x: 6, y: 5, z: 2, dir: 4 },
+      { spriteId: DOORMAT_PLAIN, x: 2, y: 5, z: 2, dir: 0 },
     ],
     wall: [
       { spriteId: WALL_MIRROR, location: ":w=5,0 l=0,20 r" },
       { spriteId: WALL_LAMP, location: ":w=2,0 l=0,24 r" },
     ],
   },
+  // model_8: upper h=5 platform (cols 1-10, rows 1-26), lower h=0 (cols 8-32, rows 8-36)
   model_8: {
     floor: [
-      { spriteId: SOFA_SILO, x: 2, y: 1, z: 0, dir: 4 },
-      { spriteId: SOFA_SILO, x: 2, y: 4, z: 0, dir: 4 },
-      { spriteId: TABLE_NORJA_MED, x: 2, y: 2, z: 0, dir: 0 },
-      { spriteId: LAMP_ARMAS, x: 1, y: 1, z: 0, dir: 2 },
-      { spriteId: LAMP_ARMAS, x: 1, y: 5, z: 0, dir: 2 },
-      { spriteId: FIREPLACE_ARMAS, x: 6, y: 1, z: 0, dir: 4 },
-      { spriteId: SHELVES_NORJA, x: 8, y: 1, z: 0, dir: 6 },
-      { spriteId: SHELVES_NORJA, x: 8, y: 2, z: 0, dir: 6 },
+      // Upper h=5 zone — lounge
+      { spriteId: SOFA_SILO, x: 2, y: 1, z: 5, dir: 4 },
+      { spriteId: SOFA_SILO, x: 2, y: 4, z: 5, dir: 4 },
+      { spriteId: TABLE_NORJA_MED, x: 2, y: 2, z: 5, dir: 0 },
+      { spriteId: LAMP_ARMAS, x: 1, y: 1, z: 5, dir: 2 },
+      { spriteId: LAMP_ARMAS, x: 1, y: 5, z: 5, dir: 2 },
+      { spriteId: FIREPLACE_ARMAS, x: 6, y: 1, z: 5, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 9, y: 1, z: 5, dir: 4 },
+      { spriteId: SHELVES_NORJA, x: 10, y: 1, z: 5, dir: 4 },
     ],
     wall: [
       { spriteId: WALL_LAMP, location: ":w=2,0 l=0,24 r" },

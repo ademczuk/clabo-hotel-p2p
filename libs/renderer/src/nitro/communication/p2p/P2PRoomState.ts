@@ -580,7 +580,7 @@ export class P2PRoomState {
 
     // Paint — MUST come BEFORE ROOM_MODEL so values are stored in _roomDatas
     // and read by createRoomInstance (avoids default white/purple fallback)
-    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "floor", "210");
+    this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "floor", "110");
     this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "wallpaper", "207");
     this._connection.injectIncomingMessage(IncomingHeader.ROOM_PAINT, "landscape", "1.1");
 
